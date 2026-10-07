@@ -215,3 +215,12 @@ details summary { cursor: pointer; }
 .lista li { margin-bottom: 8px; }
 .aviso { background: var(--acento-suave); border-radius: 8px; padding: 10px 12px; margin: 10px 0; font-size: 14px; }
 .aviso.malo { background: color-mix(in srgb, var(--alerta) 15%, transparent); color: var(--alerta); }
+
+/* El plan en la pestaña Hoy */
+.hoy-toca { background: var(--acento-suave); border-radius: 8px; padding: 7px 10px; margin-bottom: 8px; }
+.semana-plan .hecho { background: var(--hecho-suave); border-color: var(--hecho); }
+.semana-plan .hecho b { color: var(--hecho); font-size: 15px; }
+.semana-plan .falto { border-color: var(--alerta); }
+.semana-plan .falto b { color: var(--alerta); }
+.semana-plan .hoy { background: var(--acento-suave); border-color: var(--acento); border-width: 2px; }
+.semana-plan .hoy b, .semana-plan .pendiente b { color: var(--acento); }

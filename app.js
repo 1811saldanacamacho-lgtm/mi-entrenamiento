@@ -164,11 +164,45 @@ function serieNueva(tipo, previa, reps) {
     ? { peso: previa ? previa.peso : '', reps: previa ? previa.reps : reps || '', hecho: false }
     : { min: previa ? previa.min : '', hecho: false };
 }
-function ejercicioDeSesion(nombre, tipo, series, reps) {
+// Qué hacer hoy en un ejercicio de fuerza, con "doble progresión": primero se suben las repeticiones dentro
+// del rango [mínimo, máximo] y, al completar el máximo en todas las series, se sube el peso y se vuelve al mínimo.
+// Devuelve { texto, peso, reps } (peso y reps faltan cuando no hay con qué proponerlos).
+function sugerencia(nombre, tipo, series, rango) {
+  if (tipo !== 'fuerza') return null;
+  const veces = datos.sesiones.map(s => s.ejercicios.find(x => igual(x.nombre, nombre))).filter(Boolean);
+  if (!veces.length) return { texto: 'Primera vez: elige un peso con el que te sobren 2 o 3 repeticiones.' };
+  const [min, max] = rango;
+  // Las series "de trabajo" son las del peso más alto de ese día; las más ligeras se toman como calentamiento.
+  const deTrabajo = v => { const peso = Math.max(...v.series.map(s => s.peso)); return { peso, series: v.series.filter(s => s.peso === peso) }; };
+  const ult = deTrabajo(veces[veces.length - 1]), peso = ult.peso;
+  const quedoCorto = v => v.series.some(s => s.reps < min);
+  if (ult.series.length >= series && ult.series.every(s => s.reps >= max)) {
+    if (peso === 0) return { peso: 0, reps: max + 2, texto: `Completaste ${max} en todas las series: busca ${max + 2} repeticiones o agrégale peso.` };
+    const nuevo = peso + (peso >= 20 ? 2.5 : 1);
+    return { peso: nuevo, reps: min, texto: `Sube a ${kilos(nuevo)}: la vez pasada completaste ${max} repeticiones en todas las series.` };
+  }
+  if (quedoCorto(ult)) {
+    const antes = veces.length > 1 ? deTrabajo(veces[veces.length - 2]) : null;
+    if (peso > 0 && antes && antes.peso >= peso && quedoCorto(antes)) {
+      const menos = Math.round(peso * 0.9 * 2) / 2;
+      return { peso: menos, reps: min, texto: `Baja a ${kilos(menos)}: llevas dos veces sin llegar a ${min} repeticiones con ${kilos(peso)}.` };
+    }
+    return { peso, reps: min, texto: `Repite ${kilos(peso)} y busca llegar a ${min} repeticiones en todas las series.` };
+  }
+  if (ult.series.every(s => s.reps >= max)) {
+    return { peso, reps: max, texto: `Mismo peso (${kilos(peso)}): la vez pasada hiciste ${ult.series.length} de ${series} series. Completa las ${series} para subir de peso.` };
+  }
+  const meta = Math.min(max, Math.min(...ult.series.map(s => s.reps)) + 1);
+  return { peso, reps: meta, texto: `Mismo peso (${kilos(peso)}): busca ${meta} repeticiones por serie. Cuando completes ${max} en todas, subes de peso.` };
+}
+function ejercicioDeSesion(nombre, tipo, series, reps, rango) {
   const ult = ultimaVez(nombre);
+  const sug = sugerencia(nombre, tipo, series, rango || [Math.max(1, (reps || 10) - 2), (reps || 10) + 2]);
   return {
-    nombre, tipo,
-    series: Array.from({ length: series }, (_, i) => serieNueva(tipo, ult && (ult.series[i] || ult.series[ult.series.length - 1]), reps))
+    nombre, tipo, sugerencia: sug ? sug.texto : '',
+    series: Array.from({ length: series }, (_, i) => sug && sug.peso !== undefined
+      ? { peso: sug.peso, reps: sug.reps, hecho: false }
+      : serieNueva(tipo, ult && (ult.series[i] || ult.series[ult.series.length - 1]), reps))
   };
 }
 
@@ -196,6 +230,7 @@ function vistaSesion() {
       <div class="fila entre"><h3>${esc(e.nombre)}</h3>
         <button class="boton icono" data-accion="quitar-ejercicio" data-ej="${i}" title="Quitar" aria-label="Quitar ejercicio">×</button></div>
       <p class="suave chico">${ult ? `Última vez (${fechaCorta(ult.fecha)}): ${ult.series.map(s => textoSerie(e.tipo, s)).join(' · ')}` : 'Primera vez que lo registras.'}</p>
+      ${e.sugerencia ? `<p class="hoy-toca chico"><b>Hoy:</b> ${esc(e.sugerencia)}</p>` : ''}
       ${ej ? `<button class="ficha" style="margin-bottom:8px" data-accion="ver" data-nombre="${esc(ej.nombre)}">▶ Ver cómo se hace</button>` : ''}
       ${filas}
       <button class="boton secundario" style="margin-top:8px" data-accion="mas-serie" data-ej="${i}">+ Serie</button>
@@ -242,8 +277,9 @@ function vistaHoy() {
       <div class="tarjeta"><div class="etiqueta">Racha (semanas)</div><div class="valor">${racha()}</div></div>
       <div class="tarjeta"><div class="etiqueta">Total</div><div class="valor">${datos.sesiones.length}</div></div>
     </div>
+    ${panelHoyPlan()}
     <div class="panel">
-      <h2>Empezar entrenamiento</h2>
+      <h2>${datos.rutinas.some(r => r.plan) ? 'Otro entrenamiento' : 'Empezar entrenamiento'}</h2>
       <div class="lista-botones">
         ${datos.rutinas.map(r => `<button class="boton ancho" data-accion="empezar" data-id="${r.id}">${esc(r.nombre)}
           <span class="chico" style="font-weight:400"> · ${r.ejercicios.length} ejercicio${r.ejercicios.length === 1 ? '' : 's'}</span></button>`).join('')}
@@ -487,14 +523,16 @@ vista.addEventListener('click', e => {
       const r = datos.rutinas.find(x => x.id === id);
       datos.activa = {
         id: nuevoId(), fecha: hoy(), nombre: r ? r.nombre : 'Entrenamiento libre',
-        ejercicios: r ? r.ejercicios.map(x => ejercicioDeSesion(x.nombre, x.tipo, x.series, x.reps)) : []
+        ejercicios: r ? r.ejercicios.map(x => ejercicioDeSesion(x.nombre, x.tipo, x.series, x.reps, x.rango)) : []
       };
       cambio(); window.scrollTo(0, 0); break;
     }
     case 'ver': abrirVisor(b.dataset.nombre); break;
+    case 'ir': ui.tab = b.dataset.tab; pintar(); window.scrollTo(0, 0); break;
     case 'crear-plan':
       if (!datos.rutinas.some(r => r.plan) || confirm('Se reemplazan las rutinas del plan anterior. Las que creaste tú no se tocan. ¿Continuar?')) {
         crearRutinasDelPlan();
+        if (!datos.plan.desde) datos.plan.desde = hoy();
         ui.tab = 'rutinas'; cambio(); window.scrollTo(0, 0);
       }
       break;

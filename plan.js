@@ -3,10 +3,10 @@
 // ---------- Plan de entrenamiento ----------
 // series: [ejercicios base, accesorios] · sem: rango de series por músculo a la semana que se busca.
 const OBJETIVOS = {
-  musculo: { nombre: 'Ganar músculo', reps: 10, repsTexto: '8 a 12', series: [4, 3], descanso: 90, sem: [10, 20], cardio: false },
-  fuerza: { nombre: 'Ganar fuerza', reps: 5, repsTexto: '4 a 6', series: [5, 3], descanso: 180, sem: [6, 12], cardio: false },
-  grasa: { nombre: 'Bajar grasa', reps: 12, repsTexto: '10 a 15', series: [3, 3], descanso: 60, sem: [8, 15], cardio: true },
-  salud: { nombre: 'Salud y condición', reps: 12, repsTexto: '10 a 12', series: [3, 2], descanso: 75, sem: [6, 10], cardio: true }
+  musculo: { nombre: 'Ganar músculo', reps: 10, rango: [8, 12], repsTexto: '8 a 12', series: [4, 3], descanso: 90, sem: [10, 20], cardio: false },
+  fuerza: { nombre: 'Ganar fuerza', reps: 5, rango: [4, 6], repsTexto: '4 a 6', series: [5, 3], descanso: 180, sem: [6, 12], cardio: false },
+  grasa: { nombre: 'Bajar grasa', reps: 12, rango: [10, 15], repsTexto: '10 a 15', series: [3, 3], descanso: 60, sem: [8, 15], cardio: true },
+  salud: { nombre: 'Salud y condición', reps: 12, rango: [10, 12], repsTexto: '10 a 12', series: [3, 2], descanso: 75, sem: [6, 10], cardio: true }
 };
 // Días de entrenamiento: los primeros ejercicios de cada día son los básicos (varios músculos a la vez).
 const DIAS_PLAN = {
@@ -152,9 +152,68 @@ function crearRutinasDelPlan() {
   datos.rutinas = datos.rutinas.filter(r => !r.plan);
   plan.rutinas.forEach(r => datos.rutinas.push({
     id: nuevoId(), nombre: r.nombre, plan: true,
-    ejercicios: r.ejercicios.map(e => ({ id: nuevoId(), nombre: e.nombre, tipo: e.tipo, series: e.series, reps: e.reps }))
+    ejercicios: r.ejercicios.map(e => ({ id: nuevoId(), nombre: e.nombre, tipo: e.tipo, series: e.series, reps: e.reps, rango: plan.objetivo.rango }))
   }));
   datos.descansoSeg = plan.objetivo.descanso;
+}
+
+// ---------- El plan en el día a día ----------
+const DIAS_CORTOS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
+function sesionesEntre(desde, hasta) { return datos.sesiones.filter(s => s.fecha >= desde && s.fecha <= hasta); }
+// Los 7 días de esta semana: qué rutina toca y cómo va cada uno.
+function semanaDelPlan() {
+  const plan = generarPlan(datos.plan), inicio = lunes(hoy());
+  return DIAS_CORTOS.map((d, i) => {
+    const f = sumarDias(inicio, i), toca = plan.semana.find(x => x.dia === d);
+    const hecho = datos.sesiones.some(s => s.fecha === f);
+    // Un día anterior a la creación del plan no cuenta como falta.
+    const antes = f < (datos.plan.desde || hoy());
+    return { d, f, rutina: toca ? toca.rutina : null, hecho, estado: hecho ? 'hecho' : !toca || antes ? 'descanso' : f < hoy() ? 'falto' : f === hoy() ? 'hoy' : 'pendiente' };
+  });
+}
+// Cumplimiento de las últimas semanas completas (hasta 4) desde que se creó el plan. Entrenar otro día
+// de la semana también cuenta: lo que importa es llegar al número de días planeado.
+function cumplimiento() {
+  if (!datos.plan.desde) return null;
+  let hechas = 0, planeadas = 0;
+  for (let w = sumarDias(lunes(hoy()), -7), i = 0; i < 4 && w >= lunes(datos.plan.desde); w = sumarDias(w, -7), i++) {
+    hechas += Math.min(datos.plan.dias, sesionesEntre(w, sumarDias(w, 6)).length);
+    planeadas += datos.plan.dias;
+  }
+  return planeadas ? { hechas, planeadas, pct: Math.round(hechas / planeadas * 100) } : null;
+}
+function panelHoyPlan() {
+  if (!datos.rutinas.some(r => r.plan)) {
+    return `<div class="panel"><h2>Tu plan</h2>
+      <p class="suave chico">Arma tu plan y aquí verás qué toca cada día y cómo vas cumpliendo.</p>
+      <button class="boton secundario" data-accion="ir" data-tab="plan">Armar mi plan</button></div>`;
+  }
+  const semana = semanaDelPlan(), dia = semana.find(x => x.f === hoy());
+  const rutinaDe = nombre => datos.rutinas.find(r => r.plan && igual(r.nombre, nombre));
+  const boton = (r, texto, clase) => `<button class="boton ancho ${clase || ''}" data-accion="empezar" data-id="${r.id}">${texto}
+      <span class="chico" style="font-weight:400"> · ${r.ejercicios.length} ejercicios</span></button>`;
+  const hechasSemana = sesionesEntre(lunes(hoy()), sumarDias(lunes(hoy()), 6)).length;
+  const siguiente = semana.find(x => x.f > hoy() && x.rutina);
+  const falto = semana.find(x => x.estado === 'falto' && rutinaDe(x.rutina));
+  const hoyRutina = dia.rutina && rutinaDe(dia.rutina);
+  const despues = siguiente ? `Sigue: ${siguiente.d} · ${esc(siguiente.rutina)}.` : 'Ya no hay más entrenamientos esta semana.';
+
+  let cabeza;
+  if (dia.hecho) cabeza = `<h2>✓ Hoy ya entrenaste</h2><p class="suave chico">${despues}</p>`;
+  else if (hoyRutina) cabeza = `<h2>Hoy toca: ${esc(hoyRutina.nombre)}</h2>${boton(hoyRutina, 'Empezar ' + esc(hoyRutina.nombre))}`;
+  else cabeza = `<h2>Hoy es día de descanso</h2><p class="suave chico">${despues}</p>`;
+  // Un día perdido se puede reponer hoy, si hoy no hay otra cosa pendiente.
+  const reponer = falto && !dia.hecho && !hoyRutina && hechasSemana < datos.plan.dias
+    ? `<div style="margin-top:8px">${boton(rutinaDe(falto.rutina), `Reponer ${esc(falto.rutina)} (del ${falto.d})`, 'secundario')}</div>` : '';
+
+  const c = cumplimiento();
+  return `<div class="panel">
+    ${cabeza}${reponer}
+    <div class="semana-plan" style="margin-top:12px">${semana.map(x => `<div class="${x.estado}" title="${x.rutina ? esc(x.rutina) : 'Descanso'}">
+      <span>${x.d}</span><b>${x.estado === 'hecho' ? '✓' : x.estado === 'falto' ? 'Faltó' : x.rutina ? esc(x.rutina) : '—'}</b></div>`).join('')}</div>
+    <p class="chico" style="margin:10px 0 0">Esta semana: <b>${Math.min(hechasSemana, datos.plan.dias)} de ${datos.plan.dias}</b> entrenamientos.
+      ${c ? `Cumplimiento de las últimas ${c.planeadas / datos.plan.dias} semana${c.planeadas / datos.plan.dias === 1 ? '' : 's'}: <b>${c.pct}%</b>.` : ''}</p>
+  </div>`;
 }
 
 // ---------- Alimentación ----------
