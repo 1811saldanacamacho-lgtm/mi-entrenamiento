@@ -13,6 +13,8 @@ Aplicación web sencilla para llevar tus rutinas y registrar tus entrenamientos.
 - **Progreso**: entrenamientos por semana, avance por ejercicio, músculos trabajados en la semana e historial.
 - **Respaldo**: descargas tus datos en un archivo y los restauras en otro navegador o dispositivo (pestaña Rutinas → Ajustes).
 
+- **Instalable**: desde el navegador del teléfono se instala como app, con su ícono, a pantalla completa y sin necesidad de internet.
+
 ## Cómo usarla
 
 Abre `index.html` en el navegador. Para usarla en el teléfono, publícala con GitHub Pages (abajo) y agrégala a la pantalla de inicio desde el menú del navegador.

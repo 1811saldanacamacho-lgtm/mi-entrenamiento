@@ -132,7 +132,8 @@ function datosVacios() {
     },
     // Para calcular la alimentación. ritmo: qué tan rápido ir a la meta · proteinaKg: 'auto' o gramos por kilo.
     perfil: { sexo: '', edad: '', peso: '', estatura: '', actividad: 'ligero', ritmo: 'moderado', proteinaKg: 'auto', comidas: 4, pesoMeta: '', caloriasPropias: '' },
-    pesos: []          // peso corporal: { id, fecha, kg }
+    pesos: [],         // peso corporal: { id, fecha, kg }
+    ultimoRespaldo: '' // fecha del último respaldo descargado
   };
 }
 function cargar() {
@@ -294,6 +295,7 @@ function vistaHoy() {
       <div class="tarjeta"><div class="etiqueta">Racha (semanas)</div><div class="valor">${racha()}</div></div>
       <div class="tarjeta"><div class="etiqueta">Total</div><div class="valor">${datos.sesiones.length}</div></div>
     </div>
+    ${avisoRespaldo()}
     ${panelHoyPlan()}
     <div class="panel">
       <h2>${datos.rutinas.some(r => r.plan) ? 'Otro entrenamiento' : 'Empezar entrenamiento'}</h2>
@@ -308,6 +310,33 @@ function vistaHoy() {
     ${ultima ? `<div class="panel"><h2>Último entrenamiento</h2>
       <p><b>${esc(ultima.nombre)}</b> · ${fechaLarga(ultima.fecha)}</p>
       <p class="suave chico">${ultima.ejercicios.map(e => `${esc(e.nombre)} (${e.series.length})`).join(' · ')}</p></div>` : ''}`;
+}
+
+// Los datos viven solo en este navegador: cada cierto tiempo se recuerda descargar un respaldo.
+function avisoRespaldo() {
+  if (datos.sesiones.length < 3) return '';
+  const dias = datos.ultimoRespaldo ? Math.round((fecha(hoy()) - fecha(datos.ultimoRespaldo)) / 86400000) : null;
+  if (dias !== null && dias < 30) return '';
+  return `<div class="aviso fila entre">
+    <span>${dias === null ? 'Aún no has descargado un respaldo de tus datos.' : `Hace ${dias} días que no descargas un respaldo.`} Si se borran los datos del navegador, se pierde tu historial.</span>
+    <button class="boton secundario" data-accion="exportar">Descargar respaldo</button></div>`;
+}
+// ---------- Instalar como app ----------
+let avisoInstalar = null;   // el navegador lo entrega cuando la app se puede instalar con un botón
+window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); avisoInstalar = e; if (ui.tab === 'rutinas') pintar(); });
+window.addEventListener('appinstalled', () => { avisoInstalar = null; pintar(); });
+function panelInstalar() {
+  const instalada = (window.matchMedia && matchMedia('(display-mode: standalone)').matches) || navigator.standalone;
+  return `<div class="panel">
+    <h2>Instalar en el teléfono</h2>
+    ${instalada ? '<p class="chico">✓ Ya la estás usando como app instalada. Funciona también sin internet.</p>'
+    : `<p class="chico">Instalada queda con su ícono en la pantalla de inicio, abre a pantalla completa y funciona sin internet.</p>
+      ${avisoInstalar ? '<button class="boton" data-accion="instalar">Instalar app</button>' : `<ul class="lista chico">
+        <li><b>Android (Chrome):</b> menú ⋮ de arriba a la derecha → "Instalar app" o "Agregar a pantalla principal".</li>
+        <li><b>iPhone (Safari):</b> botón Compartir → "Agregar a inicio".</li>
+      </ul>
+      ${location.protocol === 'https:' || location.hostname === 'localhost' ? '' : '<p class="suave chico">Solo se puede instalar cuando la app está publicada en internet (por ejemplo con GitHub Pages), no abriendo el archivo directo.</p>'}`}`}
+  </div>`;
 }
 
 // ---------- Pestaña: Rutinas ----------
@@ -363,6 +392,7 @@ function vistaRutinas() {
       </tr>`).join('')}</tbody></table>
       ${datos.rutinas.length ? '' : '<p class="suave chico" style="margin-top:8px">Crea una rutina para poder agregarle estos ejercicios.</p>'}
     </div>
+    ${panelInstalar()}
     <div class="panel">
       <h2>Ajustes</h2>
       <label style="max-width:240px">Descanso entre series (segundos)
@@ -624,7 +654,10 @@ vista.addEventListener('click', e => {
     case 'borrar-sesion':
       if (confirm('¿Borrar este entrenamiento del historial?')) { datos.sesiones = datos.sesiones.filter(s => s.id !== id); cambio(); }
       break;
-    case 'exportar': exportar(); break;
+    case 'exportar': exportar(); datos.ultimoRespaldo = hoy(); cambio(); break;
+    case 'instalar':
+      if (avisoInstalar) { avisoInstalar.prompt(); avisoInstalar = null; }
+      break;
   }
 });
 
@@ -707,3 +740,8 @@ function importar(archivo) {
 }
 
 pintar();
+
+// Sin internet la app sigue funcionando gracias al service worker (no aplica al abrir el archivo directo).
+if ('serviceWorker' in navigator && location.protocol !== 'file:') {
+  navigator.serviceWorker.register('sw.js').catch(() => { /* sin service worker: la app funciona igual con conexión */ });
+}
