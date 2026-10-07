@@ -300,7 +300,7 @@ function vistaRutinas() {
       </div>
       <table><tbody>${CATALOGO[ui.grupo].map(x => `<tr>
         <td class="celda-mini"><button class="miniatura" data-accion="ver" data-nombre="${esc(x[0])}" aria-label="Ver animación de ${esc(x[0])}">${figura(x[0])}</button></td>
-        <td><b>${esc(x[0])}</b><div class="suave chico">${esc(x[2])}</div></td>
+        <td><b>${esc(x[0])}</b>${musculosDe(x[0]).length ? ` <span class="chip musculo-chip">${musculosDe(x[0]).join(' · ')}</span>` : ''}<div class="suave chico">${esc(x[2])}</div></td>
         <td class="derecha">${datos.rutinas.length ? `<button class="boton secundario" data-accion="ejemplo-rutina" data-nombre="${esc(x[0])}" aria-label="Agregar ${esc(x[0])} a la rutina">+</button>` : ''}</td>
       </tr>`).join('')}</tbody></table>
       ${datos.rutinas.length ? '' : '<p class="suave chico" style="margin-top:8px">Crea una rutina para poder agregarle estos ejercicios.</p>'}
@@ -437,6 +437,7 @@ function abrirVisor(nombre) {
       <button class="boton icono" data-accion="cerrar" aria-label="Cerrar">×</button>
     </div>
     <div class="escenario">${figura(nombre)}</div>
+    ${musculosDe(nombre).length ? `<p class="chico"><span class="punto-musculo"></span>Trabaja: <b>${musculosDe(nombre).join(', ')}</b> <span class="suave">(lo que se ve en naranja)</span></p>` : ''}
     <p>${esc(ej.como)}</p>
     <p class="suave chico">Se registra con ${ej.tipo === 'fuerza' ? 'peso y repeticiones' : 'tiempo en minutos'}.
       ${ult ? `Tu última vez (${fechaCorta(ult.fecha)}): ${ult.series.map(s => textoSerie(ej.tipo, s)).join(' · ')}.` : 'Aún no lo has registrado.'}</p>

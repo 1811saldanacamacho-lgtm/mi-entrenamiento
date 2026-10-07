@@ -10,6 +10,9 @@
   --hecho-suave: #e3f4ea;
   --alerta: #c0392b;
   --pista: #e8ecee;
+  --cuerpo: #4a5b64;
+  --cuerpo-lejos: #a9b6bc;
+  --musculo: #e8703a;
 }
 @media (prefers-color-scheme: dark) {
   :root {
@@ -24,6 +27,9 @@
     --hecho-suave: #1c3527;
     --alerta: #ff7b6b;
     --pista: #262f34;
+    --cuerpo: #d5dde1;
+    --cuerpo-lejos: #6b7a82;
+    --musculo: #f08a4b;
   }
 }
 
@@ -153,9 +159,11 @@ details summary { cursor: pointer; }
 
 /* Animaciones de los ejercicios */
 .figura { display: block; width: 100%; height: auto; }
-.figura .cuerpo, .figura .lejos { stroke: var(--texto); stroke-width: 3.4; stroke-linecap: round; }
-.figura .lejos { stroke: var(--suave); }
-.figura .cabeza { fill: var(--texto); }
+.figura .cuerpo, .figura .lejos, .figura .musculo { stroke: var(--cuerpo); stroke-linecap: round; }
+.figura .lejos { stroke: var(--cuerpo-lejos); }
+.figura .musculo { stroke: var(--musculo); }
+.figura .musculo-lleno { fill: var(--musculo); }
+.figura .cabeza { fill: var(--cuerpo); }
 .figura .carga { fill: var(--acento); }
 .figura .prop { stroke: var(--suave); stroke-width: 2; stroke-linecap: round; }
 .figura .prop-lleno { fill: var(--suave); }
@@ -172,3 +180,6 @@ details summary { cursor: pointer; }
 }
 .visor::backdrop { background: rgba(0, 0, 0, .6); }
 .escenario { background: var(--fondo); border-radius: 12px; margin: 12px 0; padding: 6px; }
+
+.punto-musculo { display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: var(--musculo); margin-right: 6px; }
+.musculo-chip { background: color-mix(in srgb, var(--musculo) 18%, transparent); color: var(--musculo); }

@@ -236,36 +236,151 @@ const ANIMACION_DE = {
   'sentadilla sin peso': 'sentadillaLibre', 'puente de glúteo': 'puente', 'burpees': 'burpee', 'escaladores': 'escalador'
 };
 
+// Músculos que trabaja cada animación (los primeros son los principales).
+const MUSCULOS_DE = {
+  banca: ['pecho', 'triceps'], aperturas: ['pecho'], frances: ['triceps'], inclinado: ['pecho', 'hombro'],
+  lagartija: ['pecho', 'triceps'], plancha: ['abdomen'], escalador: ['abdomen', 'muslo'], fondos: ['triceps', 'pecho'],
+  dominadas: ['espalda', 'biceps'], jalon: ['espalda', 'biceps'], remo: ['espalda', 'biceps'], remoManc: ['espalda', 'biceps'],
+  pajaros: ['hombro', 'espalda'], muerto: ['gluteo', 'espalda', 'muslo'], rumano: ['gluteo', 'muslo'],
+  sentadilla: ['muslo', 'gluteo'], sentadillaLibre: ['muslo', 'gluteo'], desplante: ['muslo', 'gluteo'], prensa: ['muslo', 'gluteo'],
+  cuadriceps: ['muslo'], femoral: ['muslo'], talones: ['pantorrilla'], militar: ['hombro', 'triceps'],
+  frontales: ['hombro'], laterales: ['hombro'], curl: ['biceps', 'antebrazo'], martillo: ['biceps', 'antebrazo'], triceps: ['triceps'],
+  abdominal: ['abdomen'], piernas: ['abdomen'], puente: ['gluteo'], giros: ['abdomen'],
+  correr: ['muslo', 'pantorrilla'], bicicleta: ['muslo', 'pantorrilla'], cuerda: ['pantorrilla'], burpee: ['muslo', 'pecho', 'abdomen']
+};
+const NOMBRE_MUSCULO = {
+  pecho: 'Pecho', espalda: 'Espalda', abdomen: 'Abdomen', hombro: 'Hombro', gluteo: 'Glúteo', biceps: 'Bíceps',
+  triceps: 'Tríceps', antebrazo: 'Antebrazo', muslo: 'Muslo', pantorrilla: 'Pantorrilla'
+};
+function musculosDe(nombre) {
+  return (MUSCULOS_DE[ANIMACION_DE[String(nombre).trim().toLowerCase()]] || []).map(m => NOMBRE_MUSCULO[m]);
+}
+
+// ---------- Movimiento entre posturas ----------
+// Entre dos posturas no se mueve cada punto en línea recta (los brazos se encogerían a medio camino):
+// el tronco y los miembros giran sobre su articulación, y cuando la mano o el pie están apoyados en un
+// punto fijo, el codo o la rodilla se acomodan para que el miembro conserve su largo.
+const PASOS = 8;   // cuadros intermedios entre postura y postura
+function intermedia(A, B, t) {
+  const hay = k => A[k] !== undefined && B[k] !== undefined;
+  const recta = k => [A[k][0] + (B[k][0] - A[k][0]) * t, A[k][1] + (B[k][1] - A[k][1]) * t];
+  const fijo = k => A[k][0] === B[k][0] && A[k][1] === B[k][1];
+  const largo = (P, a, b) => Math.hypot(P[b][0] - P[a][0], P[b][1] - P[a][1]);
+  // Gira `k` alrededor de su articulación `padre`, que ahora está en `q`.
+  const giro = (padre, k, q) => {
+    const a1 = Math.atan2(A[k][1] - A[padre][1], A[k][0] - A[padre][0]);
+    const a2 = Math.atan2(B[k][1] - B[padre][1], B[k][0] - B[padre][0]);
+    let d = a2 - a1;
+    while (d > Math.PI) d -= 2 * Math.PI;
+    while (d < -Math.PI) d += 2 * Math.PI;
+    const l = largo(A, padre, k) + (largo(B, padre, k) - largo(A, padre, k)) * t;
+    return [q[0] + Math.cos(a1 + d * t) * l, q[1] + Math.sin(a1 + d * t) * l];
+  };
+  // Codo o rodilla (`medio`) para un miembro que va de `q` a un extremo fijo `fin`.
+  const doblez = (raiz, medio, fin, q, f) => {
+    const l1 = largo(A, raiz, medio) + (largo(B, raiz, medio) - largo(A, raiz, medio)) * t;
+    const l2 = largo(A, medio, fin) + (largo(B, medio, fin) - largo(A, medio, fin)) * t;
+    const d = Math.hypot(f[0] - q[0], f[1] - q[1]);
+    if (d < 0.01) return recta(medio);
+    const lado = P => (P[fin][0] - P[raiz][0]) * (P[medio][1] - P[raiz][1]) - (P[fin][1] - P[raiz][1]) * (P[medio][0] - P[raiz][0]);
+    const signo = (Math.abs(lado(A)) > Math.abs(lado(B)) ? lado(A) : lado(B)) < 0 ? -1 : 1;
+    const cos = Math.max(-1, Math.min(1, (l1 * l1 + d * d - l2 * l2) / (2 * l1 * d)));
+    const ang = Math.atan2(f[1] - q[1], f[0] - q[0]) + signo * Math.acos(cos);
+    return [q[0] + Math.cos(ang) * l1, q[1] + Math.sin(ang) * l1];
+  };
+  const P = { c: recta('c') };
+  P.s = giro('c', 's', P.c);
+  P.h = giro('s', 'h', P.s);
+  const miembro = (raiz, medio, fin) => {
+    if (!hay(medio) || !hay(fin)) return;
+    if (fijo(fin)) {
+      P[fin] = A[fin].slice();
+      P[medio] = doblez(raiz, medio, fin, P[raiz], P[fin]);
+    } else {
+      P[medio] = giro(raiz, medio, P[raiz]);
+      P[fin] = giro(medio, fin, P[medio]);
+    }
+  };
+  miembro('s', 'e', 'm'); miembro('s', 'e2', 'm2'); miembro('c', 'r', 'p'); miembro('c', 'r2', 'p2');
+  return P;
+}
+// Todos los cuadros del ciclo, con arranque y frenado suaves entre postura y postura.
+const cuadrosListos = {};
+function cuadros(id) {
+  if (cuadrosListos[id]) return cuadrosListos[id];
+  const poses = ANIMACIONES[id].poses, lista = [];
+  poses.forEach((A, i) => {
+    const B = poses[(i + 1) % poses.length];
+    for (let k = 0; k < PASOS; k++) { const u = k / PASOS; lista.push(intermedia(A, B, u * u * (3 - 2 * u))); }
+  });
+  lista.push(intermedia(poses[0], poses[0], 0));
+  return (cuadrosListos[id] = lista);
+}
+
 // Devuelve el SVG animado de un ejercicio, o '' si no tiene animación.
 function figura(nombre) {
-  const a = ANIMACIONES[ANIMACION_DE[String(nombre).trim().toLowerCase()]];
+  const id = ANIMACION_DE[String(nombre).trim().toLowerCase()];
+  const a = ANIMACIONES[id];
   if (!a) return '';
   const quieto = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const ciclo = a.poses.concat([a.poses[0]]);
-  const dur = a.dur || 2.4;
-  // Un atributo que cambia entre posturas; si no cambia (o no se quiere movimiento) no se anima.
-  const mover = (atributo, valores) => quieto || valores.every(v => v === valores[0]) ? ''
-    : `<animate attributeName="${atributo}" values="${valores.join(';')}" dur="${dur}s" repeatCount="indefinite" calcMode="spline" keySplines="${valores.slice(1).map(() => '0.4 0 0.6 1').join(';')}"/>`;
-  const tiene = k => a.poses[0][k] !== undefined;
-  const hueso = (k1, k2, clase) => !tiene(k1) || !tiene(k2) ? '' : `<line class="${clase}" x1="${ciclo[0][k1][0]}" y1="${ciclo[0][k1][1]}" x2="${ciclo[0][k2][0]}" y2="${ciclo[0][k2][1]}">
-      ${mover('x1', ciclo.map(p => p[k1][0]))}${mover('y1', ciclo.map(p => p[k1][1]))}${mover('x2', ciclo.map(p => p[k2][0]))}${mover('y2', ciclo.map(p => p[k2][1]))}</line>`;
-  const bola = (k, r, clase) => !tiene(k) ? '' : `<circle class="${clase}" cx="${ciclo[0][k][0]}" cy="${ciclo[0][k][1]}" r="${r}">
-      ${mover('cx', ciclo.map(p => p[k][0]))}${mover('cy', ciclo.map(p => p[k][1]))}</circle>`;
+  const C = cuadros(id);
+  const dur = (a.dur || 2.4) * a.poses.length / 2;
+  const n1 = v => Math.round(v * 10) / 10;
+  // Un atributo a lo largo del ciclo; si no cambia (o no se quiere movimiento) no se anima.
+  const mover = (atributo, valores) => {
+    const v = valores.map(n1);
+    return quieto || v.every(x => x === v[0]) ? '' : `<animate attributeName="${atributo}" values="${v.join(';')}" dur="${dur}s" repeatCount="indefinite"/>`;
+  };
+  const tiene = k => C[0][k] !== undefined;
+  // Un punto puede ser una articulación ('s') o un punto a media distancia entre dos ('s+c').
+  const punto = (P, k) => {
+    if (k.indexOf('+') < 0) return P[k];
+    const [a1, b1] = k.split('+');
+    return [(P[a1][0] + P[b1][0]) / 2, (P[a1][1] + P[b1][1]) / 2];
+  };
+  // dx, dy desplazan la copia que hace de brazo o pierna del otro lado.
+  const hueso = (k1, k2, clase, ancho, dx, dy) => {
+    if (!k1.split('+').every(tiene) || !k2.split('+').every(tiene)) return '';
+    const x = (k, i) => C.map(P => punto(P, k)[i] + (i ? dy || 0 : dx || 0));
+    return `<line class="${clase}" stroke-width="${ancho}" x1="${n1(x(k1, 0)[0])}" y1="${n1(x(k1, 1)[0])}" x2="${n1(x(k2, 0)[0])}" y2="${n1(x(k2, 1)[0])}">
+      ${mover('x1', x(k1, 0))}${mover('y1', x(k1, 1))}${mover('x2', x(k2, 0))}${mover('y2', x(k2, 1))}</line>`;
+  };
+  const bola = (k, r, clase) => !tiene(k) ? '' : `<circle class="${clase}" cx="${n1(C[0][k][0])}" cy="${n1(C[0][k][1])}" r="${r}">
+      ${mover('cx', C.map(P => P[k][0]))}${mover('cy', C.map(P => P[k][1]))}</circle>`;
   const props = (a.props || []).map(([tipo, x, y, w, h]) =>
     tipo === 'rect' ? `<rect class="prop-lleno" x="${x}" y="${y}" width="${w}" height="${h}" rx="1.5"/>`
     : tipo === 'linea' ? `<line class="prop" x1="${x}" y1="${y}" x2="${w}" y2="${h}"/>`
     : tipo === 'aro' ? `<circle class="prop" cx="${x}" cy="${y}" r="${w}" fill="none"/>`
     : `<circle class="prop-lleno" cx="${x}" cy="${y}" r="${w}"/>`).join('');
-  const cable = !a.cable ? '' : `<line class="prop" x1="${a.cable[0]}" y1="${a.cable[1]}" x2="${ciclo[0].m[0]}" y2="${ciclo[0].m[1]}">
-      ${mover('x2', ciclo.map(p => p.m[0]))}${mover('y2', ciclo.map(p => p.m[1]))}</line>`;
-  return `<svg class="figura" viewBox="0 -8 120 104" role="img" aria-label="Animación de ${String(nombre).replace(/"/g, '')}">
-    <line class="piso" x1="6" y1="91" x2="114" y2="91"/>
+  const cable = !a.cable ? '' : `<line class="prop" x1="${a.cable[0]}" y1="${a.cable[1]}" x2="${n1(C[0].m[0])}" y2="${n1(C[0].m[1])}">
+      ${mover('x2', C.map(P => P.m[0]))}${mover('y2', C.map(P => P.m[1]))}</line>`;
+
+  const BRAZO = 5, ANTEBRAZO = 4.2, MUSLO = 7, PIERNA = 5.4, TRONCO = 9.5;
+  // El brazo y la pierna del otro lado: los de la postura si vienen, o una copia un poco corrida.
+  const lejos = (tiene('e2') ? hueso('s', 'e2', 'lejos', BRAZO) + hueso('e2', 'm2', 'lejos', ANTEBRAZO)
+      : hueso('s', 'e', 'lejos', BRAZO, 3, -1.5) + hueso('e', 'm', 'lejos', ANTEBRAZO, 3, -1.5))
+    + (tiene('r2') ? hueso('c', 'r2', 'lejos', MUSLO) + hueso('r2', 'p2', 'lejos', PIERNA)
+      : hueso('c', 'r', 'lejos', MUSLO, 3, -1.5) + hueso('r', 'p', 'lejos', PIERNA, 3, -1.5));
+  // Zonas que se pintan encima del cuerpo para resaltar el músculo que trabaja.
+  const ZONA = {
+    pecho: () => hueso('s', 's+c', 'musculo', TRONCO - 3), espalda: () => hueso('s', 's+c', 'musculo', TRONCO - 3),
+    abdomen: () => hueso('s+c', 'c', 'musculo', TRONCO - 3), hombro: () => bola('s', 4, 'musculo-lleno'), gluteo: () => bola('c', 4.6, 'musculo-lleno'),
+    biceps: () => hueso('s', 'e', 'musculo', BRAZO - 1.8), triceps: () => hueso('s', 'e', 'musculo', BRAZO - 1.8),
+    antebrazo: () => hueso('e', 'm', 'musculo', ANTEBRAZO - 1.8),
+    muslo: () => hueso('c', 'r', 'musculo', MUSLO - 2.6), pantorrilla: () => hueso('r', 'p', 'musculo', PIERNA - 2.2)
+  };
+  const musculos = (MUSCULOS_DE[id] || []).map(m => ZONA[m]()).join('');
+
+  return `<svg class="figura" viewBox="0 -10 120 106" role="img" aria-label="Animación de ${String(nombre).replace(/"/g, '')}">
+    <line class="piso" x1="6" y1="93" x2="114" y2="93"/>
     ${props}${cable}
-    ${hueso('s', 'e2', 'lejos')}${hueso('e2', 'm2', 'lejos')}${hueso('c', 'r2', 'lejos')}${hueso('r2', 'p2', 'lejos')}
+    ${lejos}
     ${a.carga2 ? bola(a.carga2.en, a.carga2.r, 'carga') : ''}
-    ${hueso('h', 's', 'cuerpo')}${hueso('s', 'c', 'cuerpo')}${hueso('c', 'r', 'cuerpo')}${hueso('r', 'p', 'cuerpo')}
-    ${hueso('s', 'e', 'cuerpo')}${hueso('e', 'm', 'cuerpo')}
-    ${bola('h', 5.5, 'cabeza')}
+    ${hueso('c', 'r', 'cuerpo', MUSLO)}${hueso('r', 'p', 'cuerpo', PIERNA)}
+    ${hueso('h', 's', 'cuerpo', 4.5)}${hueso('s', 'c', 'cuerpo', TRONCO)}
+    ${bola('h', 6.4, 'cabeza')}
+    ${hueso('s', 'e', 'cuerpo', BRAZO)}${hueso('e', 'm', 'cuerpo', ANTEBRAZO)}
+    ${musculos}
     ${a.carga ? bola(a.carga.en, a.carga.r, 'carga') : ''}
   </svg>`;
 }
