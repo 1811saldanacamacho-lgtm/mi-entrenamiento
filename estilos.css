@@ -61,7 +61,7 @@ main { padding: 16px; }
 }
 .pestanas button {
   flex: 1; border: 0; background: none; color: var(--suave);
-  font: inherit; font-size: 14px; font-weight: 600; padding: 16px 4px; cursor: pointer;
+  font: inherit; font-size: 13px; font-weight: 600; padding: 16px 2px; cursor: pointer;
   border-top: 3px solid transparent;
 }
 .pestanas button.activa { color: var(--acento); border-top-color: var(--acento); }
@@ -159,10 +159,8 @@ details summary { cursor: pointer; }
 
 /* Animaciones de los ejercicios */
 .figura { display: block; width: 100%; height: auto; }
-.figura .cuerpo, .figura .lejos, .figura .musculo { stroke: var(--cuerpo); stroke-linecap: round; }
+.figura .cuerpo, .figura .lejos { stroke: var(--cuerpo); stroke-linecap: round; }
 .figura .lejos { stroke: var(--cuerpo-lejos); }
-.figura .musculo { stroke: var(--musculo); }
-.figura .musculo-lleno { fill: var(--musculo); }
 .figura .cabeza { fill: var(--cuerpo); }
 .figura .carga { fill: var(--acento); }
 .figura .prop { stroke: var(--suave); stroke-width: 2; stroke-linecap: round; }
@@ -183,3 +181,37 @@ details summary { cursor: pointer; }
 
 .punto-musculo { display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: var(--musculo); margin-right: 6px; }
 .musculo-chip { background: color-mix(in srgb, var(--musculo) 18%, transparent); color: var(--musculo); }
+
+/* Mapa del cuerpo */
+.mapa { display: block; width: 100%; max-width: 380px; height: auto; margin: 4px auto 8px; }
+.mapa .silueta { fill: var(--pista); }
+.mapa .zona { fill: var(--musculo); }
+.mapa .zona.secundaria { opacity: .38; }
+.mapa text { fill: var(--suave); font-size: 9px; }
+.punto-musculo.secundaria { opacity: .38; }
+
+/* Plan y alimentación */
+.semana-plan { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+.semana-plan div { background: var(--fondo); border: 1px solid var(--borde); border-radius: 8px; padding: 6px 3px; text-align: center; min-width: 0; }
+.semana-plan span { display: block; font-size: 12px; color: var(--suave); }
+.semana-plan b { display: block; font-size: 11px; font-weight: 600; color: var(--suave); overflow-wrap: anywhere; }
+.semana-plan .activo { background: var(--acento-suave); border-color: var(--acento); }
+.semana-plan .activo b { color: var(--acento); }
+.volumen td { padding: 5px 4px; font-size: 14px; }
+.barra-celda { width: 34%; }
+.barra { position: relative; height: 10px; background: var(--pista); border-radius: 5px; overflow: hidden; }
+.barra i { display: block; height: 100%; border-radius: 5px; }
+.barra b { position: absolute; top: 0; bottom: 0; border-left: 2px solid var(--texto); border-right: 2px solid var(--texto); opacity: .35; }
+.barra .verde, .estado.verde { background: var(--hecho); }
+.barra .ambar { background: #d9a13d; }
+.barra .rojo { background: var(--alerta); }
+.estado { font-size: 12px; padding: 1px 7px; border-radius: 9px; white-space: nowrap; }
+.estado.verde { color: #fff; }
+.estado.ambar { background: color-mix(in srgb, #d9a13d 25%, transparent); color: #b07a1a; }
+.estado.rojo { background: color-mix(in srgb, var(--alerta) 20%, transparent); color: var(--alerta); }
+.estado.gris { color: var(--suave); }
+@media (prefers-color-scheme: dark) { .estado.verde { color: #0c1418; } .estado.ambar { color: #e8b75a; } }
+.lista { margin: 0; padding-left: 20px; }
+.lista li { margin-bottom: 8px; }
+.aviso { background: var(--acento-suave); border-radius: 8px; padding: 10px 12px; margin: 10px 0; font-size: 14px; }
+.aviso.malo { background: color-mix(in srgb, var(--alerta) 15%, transparent); color: var(--alerta); }

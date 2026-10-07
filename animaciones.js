@@ -236,26 +236,6 @@ const ANIMACION_DE = {
   'sentadilla sin peso': 'sentadillaLibre', 'puente de glúteo': 'puente', 'burpees': 'burpee', 'escaladores': 'escalador'
 };
 
-// Músculos que trabaja cada animación (los primeros son los principales).
-const MUSCULOS_DE = {
-  banca: ['pecho', 'triceps'], aperturas: ['pecho'], frances: ['triceps'], inclinado: ['pecho', 'hombro'],
-  lagartija: ['pecho', 'triceps'], plancha: ['abdomen'], escalador: ['abdomen', 'muslo'], fondos: ['triceps', 'pecho'],
-  dominadas: ['espalda', 'biceps'], jalon: ['espalda', 'biceps'], remo: ['espalda', 'biceps'], remoManc: ['espalda', 'biceps'],
-  pajaros: ['hombro', 'espalda'], muerto: ['gluteo', 'espalda', 'muslo'], rumano: ['gluteo', 'muslo'],
-  sentadilla: ['muslo', 'gluteo'], sentadillaLibre: ['muslo', 'gluteo'], desplante: ['muslo', 'gluteo'], prensa: ['muslo', 'gluteo'],
-  cuadriceps: ['muslo'], femoral: ['muslo'], talones: ['pantorrilla'], militar: ['hombro', 'triceps'],
-  frontales: ['hombro'], laterales: ['hombro'], curl: ['biceps', 'antebrazo'], martillo: ['biceps', 'antebrazo'], triceps: ['triceps'],
-  abdominal: ['abdomen'], piernas: ['abdomen'], puente: ['gluteo'], giros: ['abdomen'],
-  correr: ['muslo', 'pantorrilla'], bicicleta: ['muslo', 'pantorrilla'], cuerda: ['pantorrilla'], burpee: ['muslo', 'pecho', 'abdomen']
-};
-const NOMBRE_MUSCULO = {
-  pecho: 'Pecho', espalda: 'Espalda', abdomen: 'Abdomen', hombro: 'Hombro', gluteo: 'Glúteo', biceps: 'Bíceps',
-  triceps: 'Tríceps', antebrazo: 'Antebrazo', muslo: 'Muslo', pantorrilla: 'Pantorrilla'
-};
-function musculosDe(nombre) {
-  return (MUSCULOS_DE[ANIMACION_DE[String(nombre).trim().toLowerCase()]] || []).map(m => NOMBRE_MUSCULO[m]);
-}
-
 // ---------- Movimiento entre posturas ----------
 // Entre dos posturas no se mueve cada punto en línea recta (los brazos se encogerían a medio camino):
 // el tronco y los miembros giran sobre su articulación, y cuando la mano o el pie están apoyados en un
@@ -361,15 +341,6 @@ function figura(nombre) {
       : hueso('s', 'e', 'lejos', BRAZO, 3, -1.5) + hueso('e', 'm', 'lejos', ANTEBRAZO, 3, -1.5))
     + (tiene('r2') ? hueso('c', 'r2', 'lejos', MUSLO) + hueso('r2', 'p2', 'lejos', PIERNA)
       : hueso('c', 'r', 'lejos', MUSLO, 3, -1.5) + hueso('r', 'p', 'lejos', PIERNA, 3, -1.5));
-  // Zonas que se pintan encima del cuerpo para resaltar el músculo que trabaja.
-  const ZONA = {
-    pecho: () => hueso('s', 's+c', 'musculo', TRONCO - 3), espalda: () => hueso('s', 's+c', 'musculo', TRONCO - 3),
-    abdomen: () => hueso('s+c', 'c', 'musculo', TRONCO - 3), hombro: () => bola('s', 4, 'musculo-lleno'), gluteo: () => bola('c', 4.6, 'musculo-lleno'),
-    biceps: () => hueso('s', 'e', 'musculo', BRAZO - 1.8), triceps: () => hueso('s', 'e', 'musculo', BRAZO - 1.8),
-    antebrazo: () => hueso('e', 'm', 'musculo', ANTEBRAZO - 1.8),
-    muslo: () => hueso('c', 'r', 'musculo', MUSLO - 2.6), pantorrilla: () => hueso('r', 'p', 'musculo', PIERNA - 2.2)
-  };
-  const musculos = (MUSCULOS_DE[id] || []).map(m => ZONA[m]()).join('');
 
   return `<svg class="figura" viewBox="0 -10 120 106" role="img" aria-label="Animación de ${String(nombre).replace(/"/g, '')}">
     <line class="piso" x1="6" y1="93" x2="114" y2="93"/>
@@ -380,7 +351,6 @@ function figura(nombre) {
     ${hueso('h', 's', 'cuerpo', 4.5)}${hueso('s', 'c', 'cuerpo', TRONCO)}
     ${bola('h', 6.4, 'cabeza')}
     ${hueso('s', 'e', 'cuerpo', BRAZO)}${hueso('e', 'm', 'cuerpo', ANTEBRAZO)}
-    ${musculos}
     ${a.carga ? bola(a.carga.en, a.carga.r, 'carga') : ''}
   </svg>`;
 }

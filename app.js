@@ -116,7 +116,10 @@ function datosVacios() {
     descansoSeg: 90,   // cuenta regresiva entre series
     rutinas: [],       // { id, nombre, ejercicios: [{ id, nombre, tipo: 'fuerza' | 'tiempo', series, reps }] }
     sesiones: [],      // { id, fecha, nombre, ejercicios: [{ nombre, tipo, series: [{ peso, reps, min }] }] }
-    activa: null       // sesión en curso, con la misma forma más `hecho` en cada serie
+    activa: null,      // sesión en curso, con la misma forma más `hecho` en cada serie
+    plan: { objetivo: 'musculo', nivel: 'principiante', dias: 3, lugar: 'gimnasio' },
+    perfil: { sexo: '', edad: '', peso: '', estatura: '', actividad: 'ligero' },   // para calcular la alimentación
+    pesos: []          // peso corporal: { id, fecha, kg }
   };
 }
 function cargar() {
@@ -131,6 +134,8 @@ function guardar() {
 }
 
 let datos = cargar();
+datos.plan = Object.assign(datosVacios().plan, datos.plan);
+datos.perfil = Object.assign(datosVacios().perfil, datos.perfil);
 const ui = { tab: 'hoy', ejercicio: '', grupo: 'Pecho', destino: '' };
 
 // ---------- Cálculos ----------
@@ -300,7 +305,7 @@ function vistaRutinas() {
       </div>
       <table><tbody>${CATALOGO[ui.grupo].map(x => `<tr>
         <td class="celda-mini"><button class="miniatura" data-accion="ver" data-nombre="${esc(x[0])}" aria-label="Ver animación de ${esc(x[0])}">${figura(x[0])}</button></td>
-        <td><b>${esc(x[0])}</b>${musculosDe(x[0]).length ? ` <span class="chip musculo-chip">${musculosDe(x[0]).join(' · ')}</span>` : ''}<div class="suave chico">${esc(x[2])}</div></td>
+        <td><b>${esc(x[0])}</b>${trabajo(x[0]) ? ` <span class="chip musculo-chip">${trabajo(x[0]).principales.map(m => MUSCULOS[m]).join(' · ')}</span>` : ''}<div class="suave chico">${esc(x[2])}</div></td>
         <td class="derecha">${datos.rutinas.length ? `<button class="boton secundario" data-accion="ejemplo-rutina" data-nombre="${esc(x[0])}" aria-label="Agregar ${esc(x[0])} a la rutina">+</button>` : ''}</td>
       </tr>`).join('')}</tbody></table>
       ${datos.rutinas.length ? '' : '<p class="suave chico" style="margin-top:8px">Crea una rutina para poder agregarle estos ejercicios.</p>'}
@@ -321,7 +326,7 @@ function vistaRutinas() {
 // ---------- Pestaña: Historial ----------
 function vistaHistorial() {
   if (!datos.sesiones.length) return '<p class="vacio">Aquí aparecerán tus entrenamientos terminados.</p>';
-  return datos.sesiones.slice().reverse().map(s => `<div class="panel">
+  return '<h2 style="margin:18px 0 10px">Historial</h2>' + datos.sesiones.slice().reverse().map(s => `<div class="panel">
       <div class="fila entre"><div><b>${esc(s.nombre)}</b><div class="suave chico">${fechaLarga(s.fecha)}</div></div>
         <button class="boton icono" data-accion="borrar-sesion" data-id="${s.id}" title="Borrar" aria-label="Borrar entrenamiento">×</button></div>
       <p class="suave chico" style="margin-top:6px">${s.ejercicios.length} ejercicio${s.ejercicios.length === 1 ? '' : 's'} · ${suma(s.ejercicios, e => e.series.length)} series${volumen(s) ? ` · ${kilos(volumen(s))} movidos` : ''}</p>
@@ -394,7 +399,13 @@ function vistaProgreso() {
       <div class="fila entre" style="margin-bottom:10px"><h2 style="margin:0">Por ejercicio</h2>
         ${nombres.length ? `<select id="ejercicio" data-cambio="ejercicio" aria-label="Ejercicio">${nombres.map(n => `<option ${igual(n, ui.ejercicio) ? 'selected' : ''}>${esc(n)}</option>`).join('')}</select>` : ''}</div>
       ${detalle}
-    </div>`;
+    </div>
+    <div class="panel">
+      <h2>Músculos trabajados esta semana</h2>
+      <p class="suave chico">Entre más intenso el color, más series llevas en ese músculo desde el lunes. El detalle está en la pestaña Plan.</p>
+      ${mapaMuscular(nivelesDeVolumen(volumenSemana(lunes(hoy())), OBJETIVOS[datos.plan.objetivo].sem))}
+    </div>
+    ${vistaHistorial()}`;
 }
 
 // ---------- Descanso entre series ----------
@@ -430,15 +441,18 @@ function abrirVisor(nombre) {
   const ej = ejemplo(nombre);
   if (!ej) return;
   const grupo = Object.keys(CATALOGO).find(g => CATALOGO[g].some(x => igual(x[0], nombre)));
-  const ult = ultimaVez(nombre);
+  const ult = ultimaVez(nombre), tr = trabajo(nombre);
   visor.innerHTML = `
     <div class="fila entre" style="flex-wrap:nowrap;align-items:flex-start">
       <div><h2 style="margin:0 0 4px">${esc(ej.nombre)}</h2><span class="chip">${esc(grupo)}</span></div>
       <button class="boton icono" data-accion="cerrar" aria-label="Cerrar">×</button>
     </div>
     <div class="escenario">${figura(nombre)}</div>
-    ${musculosDe(nombre).length ? `<p class="chico"><span class="punto-musculo"></span>Trabaja: <b>${musculosDe(nombre).join(', ')}</b> <span class="suave">(lo que se ve en naranja)</span></p>` : ''}
     <p>${esc(ej.como)}</p>
+    ${tr ? `<h3 style="margin:14px 0 6px">Músculos que trabaja</h3>
+      ${mapaDeEjercicio(nombre)}
+      <p class="chico"><span class="punto-musculo"></span><b>Principales:</b> ${tr.principales.map(m => MUSCULOS[m]).join(', ')}</p>
+      ${tr.secundarios.length ? `<p class="chico"><span class="punto-musculo secundaria"></span><b>Secundarios:</b> ${tr.secundarios.map(m => MUSCULOS[m]).join(', ')}</p>` : ''}` : ''}
     <p class="suave chico">Se registra con ${ej.tipo === 'fuerza' ? 'peso y repeticiones' : 'tiempo en minutos'}.
       ${ult ? `Tu última vez (${fechaCorta(ult.fecha)}): ${ult.series.map(s => textoSerie(ej.tipo, s)).join(' · ')}.` : 'Aún no lo has registrado.'}</p>
     <button class="boton ancho" data-accion="cerrar">Cerrar</button>`;
@@ -448,10 +462,12 @@ function abrirVisor(nombre) {
 visor.addEventListener('click', e => { if (e.target === visor || e.target.closest('[data-accion=cerrar]')) visor.close(); });
 
 // ---------- Pintar ----------
-const VISTAS = { hoy: vistaHoy, rutinas: vistaRutinas, historial: vistaHistorial, progreso: vistaProgreso };
+const VISTAS = { hoy: vistaHoy, rutinas: vistaRutinas, plan: vistaPlan, comida: vistaComida, progreso: vistaProgreso };
 const vista = document.getElementById('vista');
 function pintar() {
+  const foco = document.activeElement && document.activeElement.id;
   vista.innerHTML = VISTAS[ui.tab]();
+  if (foco) { const el = document.getElementById(foco); if (el) el.focus(); }
   document.querySelectorAll('#pestanas button').forEach(b => b.classList.toggle('activa', b.dataset.tab === ui.tab));
 }
 function cambio() { guardar(); pintar(); }
@@ -476,6 +492,14 @@ vista.addEventListener('click', e => {
       cambio(); window.scrollTo(0, 0); break;
     }
     case 'ver': abrirVisor(b.dataset.nombre); break;
+    case 'crear-plan':
+      if (!datos.rutinas.some(r => r.plan) || confirm('Se reemplazan las rutinas del plan anterior. Las que creaste tú no se tocan. ¿Continuar?')) {
+        crearRutinasDelPlan();
+        ui.tab = 'rutinas'; cambio(); window.scrollTo(0, 0);
+      }
+      break;
+    case 'borrar-peso':
+      datos.pesos = datos.pesos.filter(x => x.id !== id); cambio(); break;
     case 'ir-ejemplos':
       ui.tab = 'rutinas'; pintar();
       document.getElementById('ejemplos').scrollIntoView();
@@ -555,6 +579,11 @@ vista.addEventListener('submit', e => {
   e.preventDefault();
   const v = Object.fromEntries(new FormData(f));
   switch (f.dataset.form) {
+    case 'peso':
+      datos.pesos.push({ id: nuevoId(), fecha: v.fecha, kg: numero(v.kg) });
+      // El peso más reciente también actualiza el perfil con el que se calcula la alimentación.
+      if (!datos.pesos.some(x => x.fecha > v.fecha)) datos.perfil.peso = numero(v.kg);
+      break;
     case 'rutina':
       datos.rutinas.push({ id: nuevoId(), nombre: v.nombre.trim(), ejercicios: [] });
       break;
@@ -572,13 +601,21 @@ vista.addEventListener('submit', e => {
 
 vista.addEventListener('change', e => {
   const el = e.target;
-  if (el.dataset.campo) {
+  if (el.dataset.campo && !el.dataset.cambio) {
     // Peso, repeticiones o minutos de una serie: se guarda sin repintar.
     datos.activa.ejercicios[el.dataset.ej].series[el.dataset.serie][el.dataset.campo] = el.value === '' ? '' : Math.max(0, numero(el.value));
     guardar();
     return;
   }
   switch (el.dataset.cambio) {
+    case 'plan':
+      datos.plan[el.dataset.campo] = el.dataset.campo === 'dias' ? +el.value : el.value;
+      guardar(); pintar(); break;
+    case 'perfil':
+      datos.perfil[el.dataset.campo] = el.type === 'number' ? (el.value === '' ? '' : numero(el.value)) : el.value;
+      guardar();
+      // Esperar a que el foco pase al siguiente campo antes de repintar, para no perderlo.
+      setTimeout(pintar, 0); break;
     case 'descanso': datos.descansoSeg = Math.max(0, numero(el.value)); guardar(); break;
     case 'ejercicio': ui.ejercicio = el.value; pintar(); break;
     case 'grupo': ui.grupo = el.value; pintar(); break;
@@ -604,6 +641,8 @@ function importar(archivo) {
       if (!Array.isArray(nuevo.rutinas) || !Array.isArray(nuevo.sesiones)) throw new Error();
       if (!confirm('Esto reemplaza todos los datos actuales por los del respaldo. ¿Continuar?')) return;
       datos = Object.assign(datosVacios(), nuevo);
+      datos.plan = Object.assign(datosVacios().plan, datos.plan);
+      datos.perfil = Object.assign(datosVacios().perfil, datos.perfil);
       cambio();
     } catch (e) {
       alert('Ese archivo no es un respaldo válido de esta aplicación.');
