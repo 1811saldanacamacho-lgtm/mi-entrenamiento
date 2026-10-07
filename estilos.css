@@ -150,3 +150,25 @@ details summary { cursor: pointer; }
 .ejemplo { border-top: 1px solid var(--borde); padding: 10px 0; }
 .ejemplo:first-of-type { border-top: 0; }
 .boton:disabled { opacity: .5; cursor: default; }
+
+/* Animaciones de los ejercicios */
+.figura { display: block; width: 100%; height: auto; }
+.figura .cuerpo, .figura .lejos { stroke: var(--texto); stroke-width: 3.4; stroke-linecap: round; }
+.figura .lejos { stroke: var(--suave); }
+.figura .cabeza { fill: var(--texto); }
+.figura .carga { fill: var(--acento); }
+.figura .prop { stroke: var(--suave); stroke-width: 2; stroke-linecap: round; }
+.figura .prop-lleno { fill: var(--suave); }
+.figura .piso { stroke: var(--borde); stroke-width: 1.5; stroke-linecap: round; }
+.celda-mini { width: 84px; padding-left: 0; }
+.miniatura {
+  display: block; width: 78px; padding: 2px; cursor: pointer;
+  background: var(--fondo); border: 1px solid var(--borde); border-radius: 10px;
+}
+.enlace { background: none; border: 0; padding: 0; color: var(--acento); cursor: pointer; text-align: left; }
+.visor {
+  width: min(92vw, 460px); border: 1px solid var(--borde); border-radius: 14px; padding: 16px;
+  background: var(--panel); color: var(--texto);
+}
+.visor::backdrop { background: rgba(0, 0, 0, .6); }
+.escenario { background: var(--fondo); border-radius: 12px; margin: 12px 0; padding: 6px; }

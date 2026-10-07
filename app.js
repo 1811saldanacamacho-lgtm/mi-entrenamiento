@@ -191,7 +191,7 @@ function vistaSesion() {
       <div class="fila entre"><h3>${esc(e.nombre)}</h3>
         <button class="boton icono" data-accion="quitar-ejercicio" data-ej="${i}" title="Quitar" aria-label="Quitar ejercicio">×</button></div>
       <p class="suave chico">${ult ? `Última vez (${fechaCorta(ult.fecha)}): ${ult.series.map(s => textoSerie(e.tipo, s)).join(' · ')}` : 'Primera vez que lo registras.'}</p>
-      ${ej ? `<details class="chico suave" style="margin-bottom:6px"><summary>¿Cómo se hace?</summary><p style="margin:4px 0 0">${esc(ej.como)}</p></details>` : ''}
+      ${ej ? `<button class="ficha" style="margin-bottom:8px" data-accion="ver" data-nombre="${esc(ej.nombre)}">▶ Ver cómo se hace</button>` : ''}
       ${filas}
       <button class="boton secundario" style="margin-top:8px" data-accion="mas-serie" data-ej="${i}">+ Serie</button>
     </section>`;
@@ -260,7 +260,7 @@ function vistaRutinas() {
       <div class="fila entre"><h2 style="margin:0">${esc(r.nombre)}</h2>
         <button class="boton icono" data-accion="borrar-rutina" data-id="${r.id}" title="Borrar" aria-label="Borrar rutina">×</button></div>
       ${r.ejercicios.length ? `<table><tbody>${r.ejercicios.map(e => `<tr>
-          <td>${esc(e.nombre)}</td>
+          <td>${ejemplo(e.nombre) ? `<button class="enlace" data-accion="ver" data-nombre="${esc(e.nombre)}">▶ ${esc(e.nombre)}</button>` : esc(e.nombre)}</td>
           <td class="num suave">${e.tipo === 'fuerza' ? `${e.series} × ${e.reps}` : `${e.series} × tiempo`}</td>
           <td class="derecha"><button class="boton icono" data-accion="borrar-ejercicio" data-id="${r.id}" data-ej="${e.id}" title="Quitar" aria-label="Quitar ejercicio">×</button></td>
         </tr>`).join('')}</tbody></table>` : '<p class="vacio">Sin ejercicios todavía.</p>'}
@@ -283,11 +283,11 @@ function vistaRutinas() {
     </div>
     <div class="panel" id="ejemplos">
       <h2>Ejemplos de rutinas</h2>
-      <p class="suave chico">Agrega la que te sirva y luego cámbiale lo que quieras.</p>
+      <p class="suave chico">Agrega la que te sirva y luego cámbiale lo que quieras. Toca un ejercicio para ver su animación.</p>
       ${PLANES.map((pl, i) => {
         const ya = datos.rutinas.some(r => igual(r.nombre, pl[0]));
         return `<details class="ejemplo"><summary><b>${esc(pl[0])}</b> <span class="suave chico">· ${esc(pl[1])}</span></summary>
-          <p class="suave chico" style="margin:6px 0">${pl[2].map(x => `${esc(x[0])} ${ejemplo(x[0]).tipo === 'fuerza' ? x[1] + ' × ' + x[2] : x[1] + ' × tiempo'}`).join(' · ')}</p>
+          <div class="fichas" style="margin:8px 0">${pl[2].map(x => `<button class="ficha" data-accion="ver" data-nombre="${esc(x[0])}">▶ ${esc(x[0])} <span class="suave">${ejemplo(x[0]).tipo === 'fuerza' ? x[1] + ' × ' + x[2] : x[1] + ' × tiempo'}</span></button>`).join('')}</div>
           <button class="boton secundario" data-accion="plan" data-plan="${i}" ${ya ? 'disabled' : ''}>${ya ? 'Ya la tienes' : 'Agregar a mis rutinas'}</button>
         </details>`;
       }).join('')}
@@ -299,6 +299,7 @@ function vistaRutinas() {
         ${datos.rutinas.length ? `<label>Agregar a la rutina<select id="destino" data-cambio="destino">${datos.rutinas.map(r => `<option value="${r.id}" ${r.id === destino ? 'selected' : ''}>${esc(r.nombre)}</option>`).join('')}</select></label>` : ''}
       </div>
       <table><tbody>${CATALOGO[ui.grupo].map(x => `<tr>
+        <td class="celda-mini"><button class="miniatura" data-accion="ver" data-nombre="${esc(x[0])}" aria-label="Ver animación de ${esc(x[0])}">${figura(x[0])}</button></td>
         <td><b>${esc(x[0])}</b><div class="suave chico">${esc(x[2])}</div></td>
         <td class="derecha">${datos.rutinas.length ? `<button class="boton secundario" data-accion="ejemplo-rutina" data-nombre="${esc(x[0])}" aria-label="Agregar ${esc(x[0])} a la rutina">+</button>` : ''}</td>
       </tr>`).join('')}</tbody></table>
@@ -423,6 +424,28 @@ function iniciarDescanso() {
 }
 barraDescanso.addEventListener('click', e => { if (e.target.closest('[data-accion=saltar]')) pararDescanso(); });
 
+// ---------- Visor de animaciones ----------
+const visor = document.getElementById('visor');
+function abrirVisor(nombre) {
+  const ej = ejemplo(nombre);
+  if (!ej) return;
+  const grupo = Object.keys(CATALOGO).find(g => CATALOGO[g].some(x => igual(x[0], nombre)));
+  const ult = ultimaVez(nombre);
+  visor.innerHTML = `
+    <div class="fila entre" style="flex-wrap:nowrap;align-items:flex-start">
+      <div><h2 style="margin:0 0 4px">${esc(ej.nombre)}</h2><span class="chip">${esc(grupo)}</span></div>
+      <button class="boton icono" data-accion="cerrar" aria-label="Cerrar">×</button>
+    </div>
+    <div class="escenario">${figura(nombre)}</div>
+    <p>${esc(ej.como)}</p>
+    <p class="suave chico">Se registra con ${ej.tipo === 'fuerza' ? 'peso y repeticiones' : 'tiempo en minutos'}.
+      ${ult ? `Tu última vez (${fechaCorta(ult.fecha)}): ${ult.series.map(s => textoSerie(ej.tipo, s)).join(' · ')}.` : 'Aún no lo has registrado.'}</p>
+    <button class="boton ancho" data-accion="cerrar">Cerrar</button>`;
+  visor.showModal();
+}
+// Se cierra con el botón o tocando fuera del cuadro.
+visor.addEventListener('click', e => { if (e.target === visor || e.target.closest('[data-accion=cerrar]')) visor.close(); });
+
 // ---------- Pintar ----------
 const VISTAS = { hoy: vistaHoy, rutinas: vistaRutinas, historial: vistaHistorial, progreso: vistaProgreso };
 const vista = document.getElementById('vista');
@@ -451,6 +474,7 @@ vista.addEventListener('click', e => {
       };
       cambio(); window.scrollTo(0, 0); break;
     }
+    case 'ver': abrirVisor(b.dataset.nombre); break;
     case 'ir-ejemplos':
       ui.tab = 'rutinas'; pintar();
       document.getElementById('ejemplos').scrollIntoView();
