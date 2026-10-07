@@ -34,28 +34,55 @@ const REPARTOS = {
     5: ['Casa A', 'Casa B', 'Casa A', 'Casa B', 'Casa A'], 6: ['Casa A', 'Casa B', 'Casa A', 'Casa B', 'Casa A', 'Casa B']
   }
 };
+// Cuánto se aprieta en las series de fuerza: series de más o de menos y cuántas repeticiones dejar "en reserva".
+const INTENSIDAD = {
+  ligera: { nombre: 'Ligera', series: -1, texto: 'termina cada serie sintiendo que podrías hacer 3 o 4 repeticiones más' },
+  normal: { nombre: 'Normal', series: 0, texto: 'termina cada serie sintiendo que podrías hacer 2 o 3 repeticiones más' },
+  alta: { nombre: 'Alta', series: 1, texto: 'termina cada serie sintiendo que solo podrías hacer 1 o 2 más; úsala cuando ya domines la técnica' }
+};
+// Cardio que se puede elegir según el lugar. Los primeros de casa no llevan saltos.
+const CARDIO = {
+  gimnasio: ['Caminadora', 'Bicicleta', 'Elíptica', 'Saltar la cuerda', 'Marcha en el lugar', 'Subir escaleras', 'Boxeo de sombra', 'Caminar al aire libre'],
+  casa: ['Marcha en el lugar', 'Subir escaleras', 'Boxeo de sombra', 'Caminar al aire libre', 'Saltos de tijera', 'Rodillas al pecho', 'Saltar la cuerda', 'Correr']
+};
+const SIN_SALTOS = ['Marcha en el lugar', 'Subir escaleras', 'Boxeo de sombra', 'Caminar al aire libre', 'Caminadora', 'Bicicleta', 'Elíptica'];
+// Intensidad del cardio: cómo debe sentirse y qué parte del pulso máximo (220 menos la edad) le corresponde.
+const CARDIO_INTENSIDAD = {
+  suave: { nombre: 'Suave', texto: 'puedes platicar sin problema (esfuerzo 3 a 4 de 10)', pulso: [0.55, 0.65] },
+  moderada: { nombre: 'Moderada', texto: 'puedes hablar, pero en frases cortas (esfuerzo 5 a 6 de 10)', pulso: [0.65, 0.75] },
+  intensa: { nombre: 'Intensa, por intervalos', texto: 'alterna 30 segundos fuerte con 60 suaves; en lo fuerte casi no puedes hablar (esfuerzo 8 a 9 de 10)', pulso: [0.80, 0.90] }
+};
+function cardioDelPlan(cfg) {
+  const o = OBJETIVOS[cfg.objetivo];
+  if (cfg.cardio === 'no' || (cfg.cardio === 'auto' && !o.cardio)) return null;
+  const tipo = CARDIO[cfg.lugar].includes(cfg.cardioTipo) ? cfg.cardioTipo : CARDIO[cfg.lugar][0];
+  const nivel = CARDIO_INTENSIDAD[cfg.cardioIntensidad] || CARDIO_INTENSIDAD.moderada;
+  return { tipo, min: cfg.cardioMin || 20, nivel, nota: `${nivel.nombre}: ${nivel.texto}.` };
+}
+
 const DIAS_SEMANA = { 2: ['Lun', 'Jue'], 3: ['Lun', 'Mié', 'Vie'], 4: ['Lun', 'Mar', 'Jue', 'Vie'], 5: ['Lun', 'Mar', 'Mié', 'Vie', 'Sáb'], 6: ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'] };
 
 function generarPlan(cfg) {
-  const o = OBJETIVOS[cfg.objetivo], principiante = cfg.nivel === 'principiante';
+  const o = OBJETIVOS[cfg.objetivo], principiante = cfg.nivel === 'principiante', avanzado = cfg.nivel === 'avanzado';
+  const fuerza = INTENSIDAD[cfg.intensidad] || INTENSIDAD.normal, cardio = cardioDelPlan(cfg);
   const nombres = REPARTOS[cfg.lugar][cfg.dias];
+  // Series de los ejercicios básicos y de los accesorios: quien empieza hace una menos (nunca menos de 3 antes
+  // del ajuste de intensidad) y quien va avanzado una más; la intensidad suma o resta otra. Entre 2 y 5.
+  const base = Math.min(5, Math.max(2, (principiante ? Math.max(3, o.series[0] - 1) : o.series[0] + (avanzado ? 1 : 0)) + fuerza.series));
+  const accesorio = Math.max(2, Math.min(base, 4, o.series[1] + (avanzado ? 1 : 0) + fuerza.series));
   const armar = nombre => {
-    // Quien empieza hace menos ejercicios y una serie menos en los básicos (nunca menos de 3).
-    const lista = DIAS_PLAN[nombre].slice(0, principiante ? 5 : 6);
-    const ejercicios = lista.map((n, i) => {
+    const ejercicios = DIAS_PLAN[nombre].slice(0, principiante ? 5 : 6).map((n, i) => {
       const tipo = ejemplo(n).tipo;
-      const base = principiante ? Math.max(3, o.series[0] - 1) : o.series[0];
-      const series = tipo === 'tiempo' ? 3 : i < 3 ? base : Math.min(o.series[1], base);
-      return { nombre: n, tipo, series, reps: o.reps };
+      return { nombre: n, tipo, series: tipo === 'tiempo' ? 3 : i < 3 ? base : accesorio, reps: o.reps };
     });
-    if (o.cardio) ejercicios.push({ nombre: cfg.lugar === 'casa' ? 'Saltar la cuerda' : 'Caminadora', tipo: 'tiempo', series: 1, reps: o.reps });
+    if (cardio) ejercicios.push({ nombre: cardio.tipo, tipo: 'tiempo', series: 1, reps: o.reps, min: cardio.min, nota: cardio.nota });
     return { nombre, ejercicios };
   };
   const unicos = [...new Set(nombres)].map(armar);
   const semana = nombres.map((n, i) => ({ dia: DIAS_SEMANA[cfg.dias][i], rutina: n }));
   const porMusculo = {};
   nombres.forEach(n => unicos.find(u => u.nombre === n).ejercicios.forEach(e => { if (e.tipo === 'fuerza') sumarSeries(porMusculo, e.nombre, e.series); }));
-  return { objetivo: o, rutinas: unicos, semana, porMusculo };
+  return { objetivo: o, rutinas: unicos, semana, porMusculo, cardio, fuerza };
 }
 // Series por músculo en los entrenamientos terminados de una semana (de lunes a domingo).
 function volumenSemana(inicio) {
@@ -92,7 +119,8 @@ function vistaPlan() {
       <h2>Mi plan</h2>
       <div class="formulario">
         <label>Objetivo<select id="plan-objetivo" data-cambio="plan" data-campo="objetivo">${Object.keys(OBJETIVOS).map(k => opcion(k, OBJETIVOS[k].nombre, cfg.objetivo)).join('')}</select></label>
-        <label>Nivel<select id="plan-nivel" data-cambio="plan" data-campo="nivel">${opcion('principiante', 'Principiante', cfg.nivel)}${opcion('intermedio', 'Intermedio', cfg.nivel)}</select></label>
+        <label>Nivel<select id="plan-nivel" data-cambio="plan" data-campo="nivel">${opcion('principiante', 'Principiante (menos de 6 meses)', cfg.nivel)}${opcion('intermedio', 'Intermedio', cfg.nivel)}${opcion('avanzado', 'Avanzado (más de 2 años)', cfg.nivel)}</select></label>
+        <label>Intensidad<select id="plan-intensidad" data-cambio="plan" data-campo="intensidad">${Object.keys(INTENSIDAD).map(k => opcion(k, INTENSIDAD[k].nombre, cfg.intensidad)).join('')}</select></label>
         <label>Días por semana<select id="plan-dias" data-cambio="plan" data-campo="dias">${[2, 3, 4, 5, 6].map(d => opcion(d, d + ' días', cfg.dias)).join('')}</select></label>
         <label>Lugar<select id="plan-lugar" data-cambio="plan" data-campo="lugar">${opcion('gimnasio', 'Gimnasio', cfg.lugar)}${opcion('casa', 'Casa sin equipo', cfg.lugar)}</select></label>
       </div>
@@ -104,7 +132,32 @@ function vistaPlan() {
         const dia = plan.semana.find(x => x.dia === d);
         return `<div class="${dia ? 'activo' : ''}"><span>${d}</span><b>${dia ? esc(dia.rutina) : 'Descanso'}</b></div>`;
       }).join('')}</div>
-      <p class="chico" style="margin-top:10px"><b>${o.repsTexto} repeticiones</b> por serie, <b>${o.descanso} segundos</b> de descanso entre series${o.cardio ? ', y cardio suave al final de cada día (20 a 30 minutos)' : ''}.</p>
+      <p class="chico" style="margin-top:10px"><b>${o.repsTexto} repeticiones</b> por serie y <b>${o.descanso} segundos</b> de descanso entre series. Intensidad ${plan.fuerza.nombre.toLowerCase()}: ${plan.fuerza.texto}.</p>
+    </div>
+
+    <div class="panel">
+      <h2>Cardio</h2>
+      <div class="formulario">
+        <label>¿Incluir cardio?<select id="plan-cardio" data-cambio="plan" data-campo="cardio">
+          ${opcion('auto', `Según mi objetivo (${o.cardio ? 'sí' : 'no'})`, cfg.cardio)}${opcion('si', 'Sí, siempre', cfg.cardio)}${opcion('no', 'No', cfg.cardio)}</select></label>
+        ${plan.cardio ? `
+        <label class="ancho">Qué cardio<select id="plan-cardio-tipo" data-cambio="plan" data-campo="cardioTipo">
+          ${CARDIO[cfg.lugar].map(n => opcion(n, n + (SIN_SALTOS.includes(n) ? ' · sin saltos' : ''), plan.cardio.tipo)).join('')}</select></label>
+        <label>Minutos<input type="number" id="plan-cardio-min" data-cambio="plan" data-campo="cardioMin" min="5" max="90" step="5" value="${plan.cardio.min}"></label>
+        <label class="ancho">Intensidad<select id="plan-cardio-int" data-cambio="plan" data-campo="cardioIntensidad">
+          ${Object.keys(CARDIO_INTENSIDAD).map(k => opcion(k, CARDIO_INTENSIDAD[k].nombre, cfg.cardioIntensidad)).join('')}</select></label>` : ''}
+      </div>
+      ${plan.cardio ? `
+      <div class="fila" style="margin-top:12px;flex-wrap:nowrap;align-items:flex-start">
+        <button class="miniatura" data-accion="ver" data-nombre="${esc(plan.cardio.tipo)}" aria-label="Ver animación de ${esc(plan.cardio.tipo)}">${figura(plan.cardio.tipo)}</button>
+        <div class="chico">
+          <p><b>${esc(plan.cardio.tipo)}, ${plan.cardio.min} minutos</b> al final de cada entrenamiento.</p>
+          <p>${esc(ejemplo(plan.cardio.tipo).como)}</p>
+          <p><b>${plan.cardio.nivel.nombre}:</b> ${plan.cardio.nivel.texto}.${numero(datos.perfil.edad) ? ` Para tu edad eso es un pulso de unas <b>${Math.round((220 - numero(datos.perfil.edad)) * plan.cardio.nivel.pulso[0])} a ${Math.round((220 - numero(datos.perfil.edad)) * plan.cardio.nivel.pulso[1])} pulsaciones</b> por minuto.` : ''}</p>
+        </div>
+      </div>
+      ${cfg.cardioIntensidad === 'intensa' ? '<div class="aviso">Los intervalos intensos son para quien ya tiene condición. Si apenas empiezas, o tienes presión alta o problemas del corazón, quédate en suave o moderada.</div>' : ''}`
+      : '<p class="suave chico" style="margin-top:10px">Este plan no lleva cardio. Puedes activarlo aquí cuando quieras.</p>'}
     </div>
 
     ${plan.rutinas.map(r => `<div class="panel">
@@ -112,7 +165,7 @@ function vistaPlan() {
       <table><tbody>${r.ejercicios.map(e => `<tr>
         <td><button class="enlace" data-accion="ver" data-nombre="${esc(e.nombre)}">▶ ${esc(e.nombre)}</button>
           <div class="suave chico">${(trabajo(e.nombre) || { principales: [] }).principales.map(m => MUSCULOS[m]).join(' · ')}</div></td>
-        <td class="num derecha">${e.tipo === 'fuerza' ? `${e.series} × ${o.repsTexto}` : e.series === 1 ? '20 a 30 min' : `${e.series} × tiempo`}</td>
+        <td class="num derecha">${e.tipo === 'fuerza' ? `${e.series} × ${o.repsTexto}` : e.min ? `${e.min} min` : `${e.series} × tiempo`}</td>
       </tr>`).join('')}</tbody></table>
     </div>`).join('')}
 
@@ -152,7 +205,7 @@ function crearRutinasDelPlan() {
   datos.rutinas = datos.rutinas.filter(r => !r.plan);
   plan.rutinas.forEach(r => datos.rutinas.push({
     id: nuevoId(), nombre: r.nombre, plan: true,
-    ejercicios: r.ejercicios.map(e => ({ id: nuevoId(), nombre: e.nombre, tipo: e.tipo, series: e.series, reps: e.reps, rango: plan.objetivo.rango }))
+    ejercicios: r.ejercicios.map(e => ({ id: nuevoId(), nombre: e.nombre, tipo: e.tipo, series: e.series, reps: e.reps, rango: plan.objetivo.rango, min: e.min, nota: e.nota }))
   }));
   datos.descansoSeg = plan.objetivo.descanso;
 }
@@ -221,12 +274,12 @@ const ACTIVIDAD = {
   sedentario: ['Sentado casi todo el día', 1.2], ligero: ['De pie o caminando parte del día', 1.375],
   moderado: ['Trabajo físico moderado', 1.55], alto: ['Trabajo físico pesado', 1.725]
 };
-// Ajuste de calorías y proteína por kilo según el objetivo.
+// Por objetivo: proteína por kilo y cuánto se mueven las calorías según el ritmo elegido.
 const NUTRICION = {
-  musculo: { ajuste: 0.10, proteina: 1.8, texto: 'un 10% arriba de tu gasto, para construir músculo sin subir de más' },
-  fuerza: { ajuste: 0.05, proteina: 1.8, texto: 'un 5% arriba de tu gasto, para rendir y recuperarte' },
-  grasa: { ajuste: -0.20, proteina: 2.0, texto: 'un 20% abajo de tu gasto, para bajar grasa cuidando el músculo' },
-  salud: { ajuste: 0, proteina: 1.4, texto: 'igual a tu gasto, para mantener tu peso' }
+  musculo: { proteina: 1.8, ritmos: { suave: 0.05, moderado: 0.10, rapido: 0.15 }, nombres: ['Lento (sube menos grasa)', 'Moderado', 'Rápido'] },
+  fuerza: { proteina: 1.8, ritmos: { suave: 0, moderado: 0.05, rapido: 0.10 }, nombres: ['Sin subir de peso', 'Moderado', 'Rápido'] },
+  grasa: { proteina: 2.0, ritmos: { suave: -0.10, moderado: -0.20, rapido: -0.25 }, nombres: ['Lento (más fácil de sostener)', 'Moderado', 'Rápido'] },
+  salud: { proteina: 1.4, ritmos: { suave: 0, moderado: 0, rapido: 0 }, nombres: null }
 };
 // Devuelve null si faltan datos del perfil.
 function metasNutricion() {
@@ -238,13 +291,28 @@ function metasNutricion() {
   // Se suma al factor de actividad lo que aporta entrenar los días del plan.
   const factor = ACTIVIDAD[p.actividad][1] + datos.plan.dias * 0.025;
   const gasto = reposo * factor;
+  const ajuste = n.ritmos[p.ritmo] !== undefined ? n.ritmos[p.ritmo] : n.ritmos.moderado;
   // Nunca por debajo del gasto en reposo ni de un mínimo prudente.
   const minimo = Math.max(reposo, p.sexo === 'hombre' ? 1500 : 1200);
-  const calorias = Math.max(minimo, gasto * (1 + n.ajuste));
-  const proteina = peso * n.proteina;
+  const calculadas = Math.max(minimo, gasto * (1 + ajuste));
+  // Si un profesional ya te indicó tus calorías, mandan esas.
+  const propias = numero(p.caloriasPropias) > 0;
+  const calorias = propias ? numero(p.caloriasPropias) : calculadas;
+  const protKg = p.proteinaKg === 'auto' || !numero(p.proteinaKg) ? n.proteina : numero(p.proteinaKg);
+  const proteina = peso * protKg;
   const grasa = Math.max(peso * 0.9, calorias * 0.2 / 9);
   const carbos = Math.max(0, (calorias - proteina * 4 - grasa * 9) / 4);
-  return { reposo, gasto, calorias, proteina, grasa, carbos, agua: peso * 35 / 1000, fibra: calorias / 1000 * 14, topado: calorias === minimo && gasto * (1 + n.ajuste) < minimo, n, peso, edad };
+  // Cambio de peso esperado: unas 7,700 kcal por kilo. Es una aproximación gruesa.
+  const kgSemana = (calorias - gasto) * 7 / 7700;
+  const meta = numero(p.pesoMeta);
+  const semanas = meta && Math.abs(kgSemana) > 0.02 && (meta - peso) / kgSemana > 0 ? Math.ceil((meta - peso) / kgSemana) : null;
+  const pct = Math.round((calorias / gasto - 1) * 100);
+  const texto = propias ? 'la que indicaste tú' : pct === 0 ? 'igual a tu gasto, para mantener tu peso' : `un ${Math.abs(pct)}% ${pct < 0 ? 'abajo' : 'arriba'} de tu gasto`;
+  return {
+    reposo, gasto, calorias, proteina, protKg, grasa, carbos, agua: peso * 35 / 1000, fibra: calorias / 1000 * 14,
+    topado: !propias && calculadas === minimo && gasto * (1 + ajuste) < minimo, bajoMinimo: propias && calorias < minimo,
+    texto, kgSemana, semanas, meta, peso, edad, comidas: Math.max(2, numero(p.comidas) || 4), n
+  };
 }
 // Proteína aproximada de alimentos comunes: [alimento, porción, gramos de proteína].
 const ALIMENTOS = [
@@ -291,6 +359,19 @@ function vistaComida() {
       <p class="suave chico" style="margin-top:10px">El objetivo (${OBJETIVOS[datos.plan.objetivo].nombre.toLowerCase()}) y los ${datos.plan.dias} días de entrenamiento se toman de la pestaña Plan.</p>
     </div>
 
+    <div class="panel">
+      <h2>Ajustar mi meta</h2>
+      <div class="formulario">
+        ${NUTRICION[datos.plan.objetivo].nombres ? `<label class="ancho">Ritmo<select id="perfil-ritmo" data-cambio="perfil" data-campo="ritmo">
+          ${['suave', 'moderado', 'rapido'].map((k, i) => opcion(k, NUTRICION[datos.plan.objetivo].nombres[i], p.ritmo)).join('')}</select></label>` : ''}
+        <label>Proteína<select id="perfil-proteina" data-cambio="perfil" data-campo="proteinaKg">
+          ${opcion('auto', 'Recomendada', String(p.proteinaKg))}${['1.2', '1.4', '1.6', '1.8', '2.0', '2.2'].map(v => opcion(v, v + ' g por kilo', String(p.proteinaKg))).join('')}</select></label>
+        <label>Comidas al día<select id="perfil-comidas" data-cambio="perfil" data-campo="comidas">${['2', '3', '4', '5', '6'].map(v => opcion(v, v, String(p.comidas))).join('')}</select></label>
+        <label>Peso meta (opcional)<input type="number" id="perfil-meta" data-cambio="perfil" data-campo="pesoMeta" min="30" max="250" step="0.5" value="${p.pesoMeta}" placeholder="kg"></label>
+        <label class="ancho">Calorías que te indicó un profesional (opcional)<input type="number" id="perfil-kcal" data-cambio="perfil" data-campo="caloriasPropias" min="800" max="6000" step="10" value="${p.caloriasPropias}" placeholder="Déjalo vacío para calcularlas"></label>
+      </div>
+    </div>
+
     ${m ? `
     <div class="tarjetas">
       <div class="tarjeta"><div class="etiqueta">Calorías al día</div><div class="valor">${kcal(m.calorias).toLocaleString('es-MX')}</div></div>
@@ -299,14 +380,17 @@ function vistaComida() {
     </div>
     <div class="panel">
       <h2>Tu meta diaria</h2>
-      <p class="chico">Tu cuerpo gasta cerca de <b>${kcal(m.gasto).toLocaleString('es-MX')} kcal</b> al día (${kcal(m.reposo).toLocaleString('es-MX')} en reposo). La meta es ${m.n.texto}.</p>
+      <p class="chico">Tu cuerpo gasta cerca de <b>${kcal(m.gasto).toLocaleString('es-MX')} kcal</b> al día (${kcal(m.reposo).toLocaleString('es-MX')} en reposo). La meta es ${m.texto}.
+        ${Math.abs(m.kgSemana) > 0.02 ? `A ese ritmo se espera ${m.kgSemana < 0 ? 'bajar' : 'subir'} cerca de <b>${Math.abs(m.kgSemana).toFixed(2)} kg por semana</b>${m.semanas ? `, así que llegarías a ${m.meta} kg en unas <b>${m.semanas} semanas</b>` : ''}.` : ''}
+        ${m.meta && !m.semanas && Math.abs(m.meta - m.peso) > 0.2 ? 'Con este objetivo y ritmo no te acercas a tu peso meta: revisa el objetivo en la pestaña Plan.' : ''}</p>
       <table><tbody>
-        <tr><td><b>Proteína</b><div class="suave chico">${m.n.proteina} g por kilo de peso</div></td><td class="num derecha">${Math.round(m.proteina)} g</td><td class="num derecha suave">${kcal(m.proteina * 4)} kcal</td></tr>
+        <tr><td><b>Proteína</b><div class="suave chico">${m.protKg} g por kilo de peso</div></td><td class="num derecha">${Math.round(m.proteina)} g</td><td class="num derecha suave">${kcal(m.proteina * 4)} kcal</td></tr>
         <tr><td><b>Grasas</b><div class="suave chico">aguacate, aceite, nueces, huevo</div></td><td class="num derecha">${Math.round(m.grasa)} g</td><td class="num derecha suave">${kcal(m.grasa * 9)} kcal</td></tr>
         <tr><td><b>Carbohidratos</b><div class="suave chico">tortilla, arroz, avena, fruta, frijol</div></td><td class="num derecha">${Math.round(m.carbos)} g</td><td class="num derecha suave">${kcal(m.carbos * 4)} kcal</td></tr>
         <tr><td><b>Fibra</b><div class="suave chico">verduras, fruta, leguminosas</div></td><td class="num derecha">${Math.round(m.fibra)} g</td><td></td></tr>
       </tbody></table>
-      <p class="chico" style="margin-top:10px">Repartido en 3 comidas y 1 colación: unos <b>${Math.round(m.proteina / 3.5)} g de proteína</b> por comida y la mitad en la colación.</p>
+      <p class="chico" style="margin-top:10px">Repartido en ${m.comidas} comidas: unos <b>${Math.round(m.proteina / m.comidas)} g de proteína</b> y <b>${kcal(m.calorias / m.comidas)} kcal</b> en cada una.</p>
+      ${m.bajoMinimo ? '<div class="aviso malo">Las calorías que indicaste están por debajo de lo que tu cuerpo gasta en reposo. Síguelas solo si te las dio un médico o nutriólogo.</div>' : ''}
       ${m.topado ? '<div class="aviso">La meta no baja de tu gasto en reposo: comer menos que eso no es recomendable sin supervisión.</div>' : ''}
       ${m.edad < 18 ? '<div class="aviso malo">Estas fórmulas son para adultos. Si eres menor de 18 años, no hagas dieta para bajar de peso sin un médico o nutriólogo.</div>' : ''}
     </div>` : `<div class="panel"><p class="vacio">Llena tus datos de arriba para calcular tus calorías, proteína y agua del día.</p></div>`}

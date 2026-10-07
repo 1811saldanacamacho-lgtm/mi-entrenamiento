@@ -80,6 +80,15 @@ const CATALOGO = {
     ['Saltar la cuerda', 'tiempo', 'Saltos cortos sobre las puntas, girando la cuerda con las muñecas.'],
     ['Correr', 'tiempo', 'Empieza suave; alterna caminar y correr si apenas comienzas.']
   ],
+  'Cardio en casa': [
+    ['Marcha en el lugar', 'tiempo', 'Camina sin avanzar, subiendo las rodillas a la altura de la cadera y moviendo los brazos. No lleva saltos.'],
+    ['Subir escaleras', 'tiempo', 'Sube y baja un tramo de escaleras, o un escalón firme, a paso constante y apoyando todo el pie. No lleva saltos.'],
+    ['Boxeo de sombra', 'tiempo', 'Lanza golpes al aire alternando brazos, con los pies en movimiento y el abdomen apretado. No lleva saltos.'],
+    ['Caminar al aire libre', 'tiempo', 'Camina a paso vivo, como si fueras con prisa. No lleva saltos.'],
+    ['Saltos de tijera', 'tiempo', 'Salta abriendo las piernas y subiendo los brazos, y regresa. Sin saltar: da un paso a un lado y al otro.'],
+    ['Rodillas al pecho', 'tiempo', 'Trota en tu lugar subiendo las rodillas lo más alto que puedas, a buen ritmo.'],
+    ['Saltar la cuerda', 'tiempo', 'Saltos cortos sobre las puntas, girando la cuerda con las muñecas.']
+  ],
   'En casa (sin equipo)': [
     ['Lagartijas', 'fuerza', 'Cuerpo recto como tabla; baja el pecho casi al piso y empuja. Sin peso, anota 0 kg.'],
     ['Sentadilla sin peso', 'fuerza', 'Baja como si te sentaras en una silla, con los talones siempre apoyados. Anota 0 kg.'],
@@ -117,8 +126,12 @@ function datosVacios() {
     rutinas: [],       // { id, nombre, ejercicios: [{ id, nombre, tipo: 'fuerza' | 'tiempo', series, reps }] }
     sesiones: [],      // { id, fecha, nombre, ejercicios: [{ nombre, tipo, series: [{ peso, reps, min }] }] }
     activa: null,      // sesión en curso, con la misma forma más `hecho` en cada serie
-    plan: { objetivo: 'musculo', nivel: 'principiante', dias: 3, lugar: 'gimnasio' },
-    perfil: { sexo: '', edad: '', peso: '', estatura: '', actividad: 'ligero' },   // para calcular la alimentación
+    plan: {
+      objetivo: 'musculo', nivel: 'principiante', dias: 3, lugar: 'gimnasio', intensidad: 'normal',
+      cardio: 'auto', cardioTipo: '', cardioMin: 20, cardioIntensidad: 'moderada'
+    },
+    // Para calcular la alimentación. ritmo: qué tan rápido ir a la meta · proteinaKg: 'auto' o gramos por kilo.
+    perfil: { sexo: '', edad: '', peso: '', estatura: '', actividad: 'ligero', ritmo: 'moderado', proteinaKg: 'auto', comidas: 4, pesoMeta: '', caloriasPropias: '' },
     pesos: []          // peso corporal: { id, fecha, kg }
   };
 }
@@ -195,7 +208,11 @@ function sugerencia(nombre, tipo, series, rango) {
   const meta = Math.min(max, Math.min(...ult.series.map(s => s.reps)) + 1);
   return { peso, reps: meta, texto: `Mismo peso (${kilos(peso)}): busca ${meta} repeticiones por serie. Cuando completes ${max} en todas, subes de peso.` };
 }
-function ejercicioDeSesion(nombre, tipo, series, reps, rango) {
+// min y nota vienen del cardio del plan: minutos a hacer y cómo debe sentirse la intensidad.
+function ejercicioDeSesion(nombre, tipo, series, reps, rango, min, nota) {
+  if (tipo === 'tiempo' && min) {
+    return { nombre, tipo, sugerencia: nota || '', series: Array.from({ length: series }, () => ({ min, hecho: false })) };
+  }
   const ult = ultimaVez(nombre);
   const sug = sugerencia(nombre, tipo, series, rango || [Math.max(1, (reps || 10) - 2), (reps || 10) + 2]);
   return {
@@ -302,7 +319,7 @@ function vistaRutinas() {
         <button class="boton icono" data-accion="borrar-rutina" data-id="${r.id}" title="Borrar" aria-label="Borrar rutina">×</button></div>
       ${r.ejercicios.length ? `<table><tbody>${r.ejercicios.map(e => `<tr>
           <td>${ejemplo(e.nombre) ? `<button class="enlace" data-accion="ver" data-nombre="${esc(e.nombre)}">▶ ${esc(e.nombre)}</button>` : esc(e.nombre)}</td>
-          <td class="num suave">${e.tipo === 'fuerza' ? `${e.series} × ${e.reps}` : `${e.series} × tiempo`}</td>
+          <td class="num suave">${e.tipo === 'fuerza' ? `${e.series} × ${e.reps}` : e.min ? `${e.min} min` : `${e.series} × tiempo`}</td>
           <td class="derecha"><button class="boton icono" data-accion="borrar-ejercicio" data-id="${r.id}" data-ej="${e.id}" title="Quitar" aria-label="Quitar ejercicio">×</button></td>
         </tr>`).join('')}</tbody></table>` : '<p class="vacio">Sin ejercicios todavía.</p>'}
       <form class="formulario" data-form="ejercicio-rutina" data-id="${r.id}" style="margin-top:10px">
@@ -523,7 +540,7 @@ vista.addEventListener('click', e => {
       const r = datos.rutinas.find(x => x.id === id);
       datos.activa = {
         id: nuevoId(), fecha: hoy(), nombre: r ? r.nombre : 'Entrenamiento libre',
-        ejercicios: r ? r.ejercicios.map(x => ejercicioDeSesion(x.nombre, x.tipo, x.series, x.reps, x.rango)) : []
+        ejercicios: r ? r.ejercicios.map(x => ejercicioDeSesion(x.nombre, x.tipo, x.series, x.reps, x.rango, x.min, x.nota)) : []
       };
       cambio(); window.scrollTo(0, 0); break;
     }
@@ -647,8 +664,8 @@ vista.addEventListener('change', e => {
   }
   switch (el.dataset.cambio) {
     case 'plan':
-      datos.plan[el.dataset.campo] = el.dataset.campo === 'dias' ? +el.value : el.value;
-      guardar(); pintar(); break;
+      datos.plan[el.dataset.campo] = ['dias', 'cardioMin'].includes(el.dataset.campo) ? Math.max(1, numero(el.value)) : el.value;
+      guardar(); setTimeout(pintar, 0); break;
     case 'perfil':
       datos.perfil[el.dataset.campo] = el.type === 'number' ? (el.value === '' ? '' : numero(el.value)) : el.value;
       guardar();

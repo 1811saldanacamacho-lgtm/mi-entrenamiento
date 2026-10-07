@@ -210,6 +210,27 @@ const ANIMACIONES = {
     ],
     dur: 0.7
   },
+  marcha: {
+    poses: [
+      postura({ e: [54, 40], m: [52, 51], e2: [66, 39], m2: [72, 32], r: [70, 58], p: [70, 76], r2: [60, 72], p2: [60, 90] }),
+      postura({ e: [66, 39], m: [72, 32], e2: [54, 40], m2: [52, 51], r: [60, 72], p: [60, 90], r2: [70, 58], p2: [70, 76] })
+    ],
+    dur: 1.1
+  },
+  tijeras: {
+    poses: [
+      postura({ e: [54, 41], m: [52, 53], e2: [66, 41], m2: [68, 53], r: [57, 72], p: [57, 90], r2: [63, 72], p2: [63, 90] }, FRENTE),
+      { h: [60, 15], s: [60, 24], c: [60, 50], e: [48, 16], m: [40, 5], e2: [72, 16], m2: [80, 5], r: [50, 68], p: [42, 86], r2: [70, 68], p2: [78, 86] }
+    ],
+    dur: 0.9
+  },
+  golpe: {
+    poses: [
+      { h: [62, 20], s: [60, 29], c: [58, 54], e: [74, 31], m: [88, 29], e2: [64, 42], m2: [68, 33], r: [66, 70], p: [70, 90], r2: [52, 72], p2: [46, 90] },
+      { h: [62, 20], s: [60, 29], c: [58, 54], e: [64, 42], m: [68, 33], e2: [74, 31], m2: [88, 29], r: [66, 70], p: [70, 90], r2: [52, 72], p2: [46, 90] }
+    ],
+    dur: 0.8
+  },
   burpee: {
     poses: [
       DE_PIE,
@@ -233,6 +254,8 @@ const ANIMACION_DE = {
   'curl de bíceps': 'curl', 'curl martillo': 'martillo', 'extensión de tríceps': 'triceps', 'press francés': 'frances',
   'plancha': 'plancha', 'abdominales': 'abdominal', 'elevación de piernas': 'piernas', 'giros rusos': 'giros',
   'caminadora': 'correr', 'bicicleta': 'bicicleta', 'elíptica': 'correr', 'saltar la cuerda': 'cuerda', 'correr': 'correr',
+  'marcha en el lugar': 'marcha', 'subir escaleras': 'marcha', 'rodillas al pecho': 'marcha', 'saltos de tijera': 'tijeras',
+  'boxeo de sombra': 'golpe', 'caminar al aire libre': 'correr',
   'sentadilla sin peso': 'sentadillaLibre', 'puente de glúteo': 'puente', 'burpees': 'burpee', 'escaladores': 'escalador'
 };
 

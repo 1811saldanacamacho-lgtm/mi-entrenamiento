@@ -48,7 +48,13 @@ const TRABAJO = {
   'correr': [['cuadriceps', 'gemelos'], ['gluteo', 'isquios']],
   'elíptica': [['cuadriceps', 'gluteo'], ['gemelos', 'isquios']],
   'bicicleta': [['cuadriceps'], ['gluteo', 'gemelos', 'isquios']],
-  'saltar la cuerda': [['gemelos'], ['cuadriceps', 'antebrazo']]
+  'saltar la cuerda': [['gemelos'], ['cuadriceps', 'antebrazo']],
+  'marcha en el lugar': [['cuadriceps'], ['gluteo', 'gemelos', 'abdomen']],
+  'subir escaleras': [['cuadriceps', 'gluteo'], ['gemelos', 'isquios']],
+  'boxeo de sombra': [['deltAnt'], ['triceps', 'abdomen', 'oblicuos', 'pectoral']],
+  'caminar al aire libre': [['cuadriceps', 'gemelos'], ['gluteo', 'isquios']],
+  'saltos de tijera': [['gemelos', 'deltMed'], ['cuadriceps', 'aductores']],
+  'rodillas al pecho': [['cuadriceps'], ['abdomen', 'gemelos', 'gluteo']]
 };
 function trabajo(nombre) {
   const t = TRABAJO[String(nombre).trim().toLowerCase()];
