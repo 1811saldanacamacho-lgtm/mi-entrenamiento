@@ -29,6 +29,87 @@ function suma(lista, f) { return lista.reduce((t, x) => t + f(x), 0); }
 function igual(a, b) { return a.trim().toLowerCase() === b.trim().toLowerCase(); }
 function kilos(n) { return (Math.round(n * 10) / 10).toLocaleString('es-MX') + ' kg'; }
 
+// ---------- Ejemplos ----------
+// Ejercicios de ejemplo por grupo: [nombre, tipo, cómo se hace].
+const CATALOGO = {
+  'Pecho': [
+    ['Press de banca', 'fuerza', 'Acostado, baja la barra al pecho con control y empuja hasta estirar los brazos.'],
+    ['Press inclinado con mancuernas', 'fuerza', 'En banco inclinado, empuja las mancuernas hacia arriba sin chocar una con otra.'],
+    ['Lagartijas', 'fuerza', 'Cuerpo recto como tabla; baja el pecho casi al piso y empuja. Sin peso, anota 0 kg.'],
+    ['Aperturas con mancuernas', 'fuerza', 'Brazos casi estirados; abre hasta sentir el estiramiento y cierra arriba del pecho.'],
+    ['Fondos', 'fuerza', 'En paralelas, baja doblando los codos hasta 90° e inclínate un poco al frente.']
+  ],
+  'Espalda': [
+    ['Dominadas', 'fuerza', 'Cuelga de la barra y sube hasta pasar la barbilla; baja despacio.'],
+    ['Jalón al pecho', 'fuerza', 'Sentado, jala la barra hacia la parte alta del pecho juntando los omóplatos.'],
+    ['Remo con barra', 'fuerza', 'Torso inclinado y espalda recta; jala la barra hacia el abdomen.'],
+    ['Remo con mancuerna', 'fuerza', 'Apoya una mano y una rodilla en el banco; jala la mancuerna hacia la cadera.'],
+    ['Peso muerto', 'fuerza', 'Espalda recta, barra pegada a las piernas; levanta empujando el piso con los pies.']
+  ],
+  'Pierna': [
+    ['Sentadilla', 'fuerza', 'Pies al ancho de hombros; baja como si te sentaras, con las rodillas siguiendo la punta de los pies.'],
+    ['Prensa', 'fuerza', 'Empuja la plataforma sin bloquear las rodillas al final y baja con control.'],
+    ['Peso muerto rumano', 'fuerza', 'Rodillas apenas dobladas; lleva la cadera atrás hasta sentir el estiramiento atrás del muslo.'],
+    ['Desplantes', 'fuerza', 'Da un paso largo y baja hasta que ambas rodillas queden cerca de 90°. Alterna piernas.'],
+    ['Extensión de cuádriceps', 'fuerza', 'Sentado en la máquina, estira las piernas y baja despacio.'],
+    ['Curl femoral', 'fuerza', 'En la máquina, lleva los talones hacia los glúteos y regresa con control.'],
+    ['Elevación de talones', 'fuerza', 'De pie, sube a las puntas lo más alto que puedas y baja lento.']
+  ],
+  'Hombro': [
+    ['Press militar', 'fuerza', 'De pie o sentado, empuja la barra arriba de la cabeza sin arquear la espalda.'],
+    ['Elevaciones laterales', 'fuerza', 'Sube las mancuernas a los lados hasta la altura de los hombros, codos apenas doblados.'],
+    ['Elevaciones frontales', 'fuerza', 'Sube la mancuerna al frente hasta la altura de los ojos, sin balancearte.'],
+    ['Pájaros', 'fuerza', 'Inclinado al frente, abre los brazos hacia los lados para trabajar la parte de atrás del hombro.']
+  ],
+  'Brazo': [
+    ['Curl de bíceps', 'fuerza', 'Codos pegados al cuerpo; sube la barra o mancuernas sin mover los hombros.'],
+    ['Curl martillo', 'fuerza', 'Igual que el curl, pero con las palmas viéndose una a la otra.'],
+    ['Extensión de tríceps', 'fuerza', 'En polea, empuja hacia abajo hasta estirar el brazo, con los codos quietos.'],
+    ['Press francés', 'fuerza', 'Acostado, baja la barra hacia la frente doblando solo los codos y estira.']
+  ],
+  'Abdomen': [
+    ['Plancha', 'tiempo', 'Apoyado en antebrazos y puntas, cuerpo recto y abdomen apretado. Anota los minutos.'],
+    ['Abdominales', 'fuerza', 'Sube el torso despegando los hombros del piso, sin jalar el cuello. Sin peso, anota 0 kg.'],
+    ['Elevación de piernas', 'fuerza', 'Acostado o colgado, sube las piernas rectas y bájalas sin tocar el piso.'],
+    ['Giros rusos', 'fuerza', 'Sentado con el torso inclinado atrás, gira de lado a lado con o sin peso.']
+  ],
+  'Cardio': [
+    ['Caminadora', 'tiempo', 'Camina o trota a un ritmo en el que todavía puedas hablar.'],
+    ['Bicicleta', 'tiempo', 'Ajusta el asiento a la altura de la cadera y mantén un pedaleo constante.'],
+    ['Elíptica', 'tiempo', 'Espalda recta y movimiento continuo; sube la resistencia poco a poco.'],
+    ['Saltar la cuerda', 'tiempo', 'Saltos cortos sobre las puntas, girando la cuerda con las muñecas.'],
+    ['Correr', 'tiempo', 'Empieza suave; alterna caminar y correr si apenas comienzas.']
+  ],
+  'En casa (sin equipo)': [
+    ['Lagartijas', 'fuerza', 'Cuerpo recto como tabla; baja el pecho casi al piso y empuja. Sin peso, anota 0 kg.'],
+    ['Sentadilla sin peso', 'fuerza', 'Baja como si te sentaras en una silla, con los talones siempre apoyados. Anota 0 kg.'],
+    ['Desplantes', 'fuerza', 'Da un paso largo y baja hasta que ambas rodillas queden cerca de 90°. Alterna piernas.'],
+    ['Puente de glúteo', 'fuerza', 'Acostado boca arriba, sube la cadera apretando los glúteos y baja lento.'],
+    ['Burpees', 'fuerza', 'Baja a lagartija, regresa los pies, salta. Anota las repeticiones con 0 kg.'],
+    ['Plancha', 'tiempo', 'Apoyado en antebrazos y puntas, cuerpo recto y abdomen apretado. Anota los minutos.'],
+    ['Escaladores', 'tiempo', 'En posición de lagartija, lleva las rodillas al pecho alternando rápido.']
+  ]
+};
+// Rutinas de ejemplo: [nombre, descripción, [[ejercicio, series, repeticiones]]].
+const PLANES = [
+  ['Empuje', 'Gimnasio · pecho, hombro y tríceps', [['Press de banca', 4, 8], ['Press militar', 3, 10], ['Fondos', 3, 10], ['Extensión de tríceps', 3, 12]]],
+  ['Jalón', 'Gimnasio · espalda y bíceps', [['Dominadas', 4, 6], ['Remo con barra', 4, 8], ['Jalón al pecho', 3, 10], ['Curl de bíceps', 3, 12]]],
+  ['Pierna', 'Gimnasio · pierna completa', [['Sentadilla', 4, 8], ['Peso muerto rumano', 3, 10], ['Prensa', 3, 12], ['Elevación de talones', 3, 15]]],
+  ['Cuerpo completo', 'Gimnasio · para empezar, 2 o 3 veces por semana', [['Sentadilla', 3, 10], ['Press de banca', 3, 10], ['Jalón al pecho', 3, 10], ['Press militar', 2, 12], ['Plancha', 3, 0]]],
+  ['En casa sin equipo', 'Casa · solo con tu peso', [['Sentadilla sin peso', 3, 15], ['Lagartijas', 3, 10], ['Desplantes', 3, 12], ['Puente de glúteo', 3, 15], ['Plancha', 3, 0]]],
+  ['Cardio y abdomen', 'Gimnasio o casa · día ligero', [['Caminadora', 1, 0], ['Abdominales', 3, 15], ['Elevación de piernas', 3, 12], ['Plancha', 3, 0]]]
+];
+function ejemplo(nombre) {
+  for (const grupo in CATALOGO) {
+    const e = CATALOGO[grupo].find(x => igual(x[0], nombre));
+    if (e) return { nombre: e[0], tipo: e[1], como: e[2] };
+  }
+  return null;
+}
+function opcionesGrupo(elegido) {
+  return Object.keys(CATALOGO).map(g => `<option ${g === elegido ? 'selected' : ''}>${esc(g)}</option>`).join('');
+}
+
 // ---------- Datos ----------
 function datosVacios() {
   return {
@@ -50,7 +131,7 @@ function guardar() {
 }
 
 let datos = cargar();
-const ui = { tab: 'hoy', ejercicio: '' };
+const ui = { tab: 'hoy', ejercicio: '', grupo: 'Pecho', destino: '' };
 
 // ---------- Cálculos ----------
 function volumen(sesion) {
@@ -105,10 +186,12 @@ function vistaSesion() {
           <span class="suave">min</span>
           <button class="hecho" data-accion="hecho" data-ej="${i}" data-serie="${j}" aria-pressed="${s.hecho}" aria-label="Hecho">✓</button>
         </div>`).join('');
+    const ej = ejemplo(e.nombre);
     return `<section class="panel">
       <div class="fila entre"><h3>${esc(e.nombre)}</h3>
         <button class="boton icono" data-accion="quitar-ejercicio" data-ej="${i}" title="Quitar" aria-label="Quitar ejercicio">×</button></div>
       <p class="suave chico">${ult ? `Última vez (${fechaCorta(ult.fecha)}): ${ult.series.map(s => textoSerie(e.tipo, s)).join(' · ')}` : 'Primera vez que lo registras.'}</p>
+      ${ej ? `<details class="chico suave" style="margin-bottom:6px"><summary>¿Cómo se hace?</summary><p style="margin:4px 0 0">${esc(ej.como)}</p></details>` : ''}
       ${filas}
       <button class="boton secundario" style="margin-top:8px" data-accion="mas-serie" data-ej="${i}">+ Serie</button>
     </section>`;
@@ -127,6 +210,9 @@ function vistaSesion() {
         <button class="boton secundario">Agregar</button>
       </form>
       <datalist id="conocidos">${nombresConocidos().map(n => `<option value="${esc(n)}">`).join('')}</datalist>
+      <div class="fila" style="margin:14px 0 8px"><span class="suave chico">O elige un ejemplo de</span>
+        <select id="grupo" data-cambio="grupo" aria-label="Grupo de ejercicios">${opcionesGrupo(ui.grupo)}</select></div>
+      <div class="fichas">${CATALOGO[ui.grupo].map(x => `<button class="ficha" data-accion="ejemplo-sesion" data-nombre="${esc(x[0])}" title="${esc(x[2])}">+ ${esc(x[0])}</button>`).join('')}</div>
     </div>
     <div class="lista-botones">
       <button class="boton ancho" data-accion="terminar">Terminar entrenamiento</button>
@@ -137,6 +223,7 @@ function nombresConocidos() {
   const nombres = new Map();
   datos.rutinas.forEach(r => r.ejercicios.forEach(e => nombres.set(e.nombre.toLowerCase(), e.nombre)));
   datos.sesiones.forEach(s => s.ejercicios.forEach(e => nombres.set(e.nombre.toLowerCase(), e.nombre)));
+  Object.values(CATALOGO).forEach(g => g.forEach(e => { if (!nombres.has(e[0].toLowerCase())) nombres.set(e[0].toLowerCase(), e[0]); }));
   return [...nombres.values()].sort((a, b) => a.localeCompare(b));
 }
 function vistaHoy() {
@@ -156,7 +243,7 @@ function vistaHoy() {
         ${datos.rutinas.map(r => `<button class="boton ancho" data-accion="empezar" data-id="${r.id}">${esc(r.nombre)}
           <span class="chico" style="font-weight:400"> · ${r.ejercicios.length} ejercicio${r.ejercicios.length === 1 ? '' : 's'}</span></button>`).join('')}
         <button class="boton secundario ancho" data-accion="empezar">Entrenamiento libre</button>
-        ${datos.rutinas.length ? '' : '<button class="boton secundario ancho" data-accion="ejemplos">Crear rutinas de ejemplo</button>'}
+        ${datos.rutinas.length ? '' : '<button class="boton secundario ancho" data-accion="ir-ejemplos">Ver rutinas y ejercicios de ejemplo</button>'}
       </div>
       ${datos.rutinas.length ? '' : '<p class="suave chico" style="margin-top:10px">Aún no tienes rutinas. Créalas en la pestaña Rutinas, usa las de ejemplo o empieza un entrenamiento libre.</p>'}
     </div>
@@ -167,6 +254,8 @@ function vistaHoy() {
 
 // ---------- Pestaña: Rutinas ----------
 function vistaRutinas() {
+  if (!datos.rutinas.some(r => r.id === ui.destino)) ui.destino = datos.rutinas.length ? datos.rutinas[datos.rutinas.length - 1].id : '';
+  const destino = ui.destino;
   const tarjetas = datos.rutinas.map(r => `<div class="panel">
       <div class="fila entre"><h2 style="margin:0">${esc(r.nombre)}</h2>
         <button class="boton icono" data-accion="borrar-rutina" data-id="${r.id}" title="Borrar" aria-label="Borrar rutina">×</button></div>
@@ -191,6 +280,29 @@ function vistaRutinas() {
         <label class="ancho">Nombre<input name="nombre" placeholder="Ej. Pierna, Día A, Cardio" required></label>
         <button class="boton">Crear</button>
       </form>
+    </div>
+    <div class="panel" id="ejemplos">
+      <h2>Ejemplos de rutinas</h2>
+      <p class="suave chico">Agrega la que te sirva y luego cámbiale lo que quieras.</p>
+      ${PLANES.map((pl, i) => {
+        const ya = datos.rutinas.some(r => igual(r.nombre, pl[0]));
+        return `<details class="ejemplo"><summary><b>${esc(pl[0])}</b> <span class="suave chico">· ${esc(pl[1])}</span></summary>
+          <p class="suave chico" style="margin:6px 0">${pl[2].map(x => `${esc(x[0])} ${ejemplo(x[0]).tipo === 'fuerza' ? x[1] + ' × ' + x[2] : x[1] + ' × tiempo'}`).join(' · ')}</p>
+          <button class="boton secundario" data-accion="plan" data-plan="${i}" ${ya ? 'disabled' : ''}>${ya ? 'Ya la tienes' : 'Agregar a mis rutinas'}</button>
+        </details>`;
+      }).join('')}
+    </div>
+    <div class="panel">
+      <h2>Ejemplos de ejercicios</h2>
+      <div class="formulario" style="margin-bottom:10px">
+        <label>Grupo<select id="grupo" data-cambio="grupo">${opcionesGrupo(ui.grupo)}</select></label>
+        ${datos.rutinas.length ? `<label>Agregar a la rutina<select id="destino" data-cambio="destino">${datos.rutinas.map(r => `<option value="${r.id}" ${r.id === destino ? 'selected' : ''}>${esc(r.nombre)}</option>`).join('')}</select></label>` : ''}
+      </div>
+      <table><tbody>${CATALOGO[ui.grupo].map(x => `<tr>
+        <td><b>${esc(x[0])}</b><div class="suave chico">${esc(x[2])}</div></td>
+        <td class="derecha">${datos.rutinas.length ? `<button class="boton secundario" data-accion="ejemplo-rutina" data-nombre="${esc(x[0])}" aria-label="Agregar ${esc(x[0])} a la rutina">+</button>` : ''}</td>
+      </tr>`).join('')}</tbody></table>
+      ${datos.rutinas.length ? '' : '<p class="suave chico" style="margin-top:8px">Crea una rutina para poder agregarle estos ejercicios.</p>'}
     </div>
     <div class="panel">
       <h2>Ajustes</h2>
@@ -326,12 +438,6 @@ document.getElementById('pestanas').addEventListener('click', e => {
   if (b) { ui.tab = b.dataset.tab; pintar(); window.scrollTo(0, 0); }
 });
 
-const EJEMPLOS = [
-  ['Empuje', [['Press de banca', 4, 8], ['Press militar', 3, 10], ['Fondos', 3, 10], ['Extensión de tríceps', 3, 12]]],
-  ['Jalón', [['Dominadas', 4, 6], ['Remo con barra', 4, 8], ['Jalón al pecho', 3, 10], ['Curl de bíceps', 3, 12]]],
-  ['Pierna', [['Sentadilla', 4, 8], ['Peso muerto rumano', 3, 10], ['Prensa', 3, 12], ['Elevación de talones', 3, 15]]]
-];
-
 vista.addEventListener('click', e => {
   const b = e.target.closest('[data-accion]');
   if (!b) return;
@@ -345,12 +451,30 @@ vista.addEventListener('click', e => {
       };
       cambio(); window.scrollTo(0, 0); break;
     }
-    case 'ejemplos':
-      EJEMPLOS.forEach(([nombre, ejercicios]) => datos.rutinas.push({
+    case 'ir-ejemplos':
+      ui.tab = 'rutinas'; pintar();
+      document.getElementById('ejemplos').scrollIntoView();
+      break;
+    case 'plan': {
+      const [nombre, , ejercicios] = PLANES[b.dataset.plan];
+      datos.rutinas.push({
         id: nuevoId(), nombre,
-        ejercicios: ejercicios.map(([n, series, reps]) => ({ id: nuevoId(), nombre: n, tipo: 'fuerza', series, reps }))
-      }));
+        ejercicios: ejercicios.map(([n, series, reps]) => ({ id: nuevoId(), nombre: n, tipo: ejemplo(n).tipo, series, reps: reps || 10 }))
+      });
       cambio(); break;
+    }
+    case 'ejemplo-rutina': {
+      const ej = ejemplo(b.dataset.nombre);
+      datos.rutinas.find(r => r.id === ui.destino).ejercicios.push({
+        id: nuevoId(), nombre: ej.nombre, tipo: ej.tipo, series: ej.tipo === 'fuerza' ? 3 : 1, reps: 10
+      });
+      cambio(); break;
+    }
+    case 'ejemplo-sesion': {
+      const ej = ejemplo(b.dataset.nombre);
+      a.ejercicios.push(ejercicioDeSesion(ej.nombre, ej.tipo, ej.tipo === 'fuerza' ? 3 : 1, 10));
+      cambio(); break;
+    }
     case 'hecho': {
       // Sin repintar, para no cerrar el teclado ni perder el lugar en el teléfono.
       const s = a.ejercicios[b.dataset.ej].series[b.dataset.serie];
@@ -415,7 +539,7 @@ vista.addEventListener('submit', e => {
       });
       break;
     case 'ejercicio-sesion':
-      datos.activa.ejercicios.push(ejercicioDeSesion(v.nombre.trim(), v.tipo, v.tipo === 'fuerza' ? 3 : 1));
+      datos.activa.ejercicios.push(ejercicioDeSesion(v.nombre.trim(), v.tipo, v.tipo === 'fuerza' ? 3 : 1, 10));
       break;
   }
   cambio();
@@ -432,6 +556,8 @@ vista.addEventListener('change', e => {
   switch (el.dataset.cambio) {
     case 'descanso': datos.descansoSeg = Math.max(0, numero(el.value)); guardar(); break;
     case 'ejercicio': ui.ejercicio = el.value; pintar(); break;
+    case 'grupo': ui.grupo = el.value; pintar(); break;
+    case 'destino': ui.destino = el.value; break;
     case 'importar': importar(el.files[0]); break;
   }
 });

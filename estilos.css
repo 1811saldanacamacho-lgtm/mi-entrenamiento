@@ -141,3 +141,12 @@ details summary { cursor: pointer; }
 .grafica circle { fill: var(--acento); }
 .grafica .eje { stroke: var(--borde); stroke-width: 1; }
 .grafica text { fill: var(--suave); font-size: 11px; }
+
+.fichas { display: flex; flex-wrap: wrap; gap: 8px; }
+.ficha {
+  border: 1px solid var(--borde); background: var(--acento-suave); color: var(--acento);
+  border-radius: 18px; padding: 8px 14px; font-size: 14px; cursor: pointer;
+}
+.ejemplo { border-top: 1px solid var(--borde); padding: 10px 0; }
+.ejemplo:first-of-type { border-top: 0; }
+.boton:disabled { opacity: .5; cursor: default; }
